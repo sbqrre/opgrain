@@ -1,0 +1,49 @@
+name: JSON0 compatibility
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  moonbit:
+    name: MoonBit / ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [native, js, wasm, wasm-gc]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install MoonBit
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - run: moon version --all
+      - name: Test core and fixtures
+        run: moon test --frozen --deny-warn --target "${{ matrix.target }}"
+      - name: Run the task board example
+        run: moon run examples/board --target "${{ matrix.target }}" --frozen
+
+  oracle:
+    name: Node / pinned upstream
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: test/oracle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: test/oracle/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm test
+      - run: npm run fixtures -- --check

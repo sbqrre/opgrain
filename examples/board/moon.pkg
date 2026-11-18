@@ -1,0 +1,6 @@
+import {
+  "sbqrre/opgrain",
+  "moonbitlang/core/debug",
+}
+
+pkgtype(kind: "executable")

@@ -1,0 +1,123 @@
+// Generated using `moon info`, DON'T EDIT IT
+package "sbqrre/opgrain"
+
+import {
+  "moonbitlang/core/debug",
+  "moonbitlang/core/json",
+}
+
+// Values
+pub fn apply(@json.Json, Operation) -> @json.Json raise OpError
+
+pub fn can_op_affect_path(Operation, Array[PathSegment]) -> Bool
+
+pub fn check_valid_op(@json.Json) -> Unit raise OpError
+
+pub fn common_length_for_ops(Component, Component) -> Int32?
+
+pub fn compose(Operation, Operation) -> Operation raise OpError
+
+pub fn create(data? : @json.Json) -> @json.Json
+
+pub fn invert(Operation) -> Operation raise OpError
+
+pub let name : String
+
+pub fn normalize(@json.Json) -> Operation raise OpError
+
+pub fn parse_json(String) -> @json.Json raise OpError
+
+pub fn path_matches(Array[PathSegment], Array[PathSegment], ignore_last? : Bool) -> Bool
+
+pub fn stringify_json(@json.Json) -> String raise OpError
+
+pub fn text0_normalize(@json.Json) -> @json.Json raise OpError
+
+pub fn text0_transform_cursor(Int32, @json.Json, side? : Side) -> Int32 raise OpError
+
+pub fn transform(Operation, Operation, Side) -> Operation raise OpError
+
+pub fn transform_x(Operation, Operation) -> (Operation, Operation) raise OpError
+
+pub let uri : String
+
+// Errors
+#derive(@debug.Debug)
+pub(all) suberror OpError {
+  InvalidJson(String)
+  InvalidComponent(Int32, String)
+  InvalidPath(Array[PathSegment], String)
+  UnknownSubtype(String)
+  SubtypeError(String, String)
+  TextMismatch(Int32)
+  NonFiniteNumber
+  MissingRoot
+}
+pub fn OpError::to_repr(Self) -> @debug.Repr
+
+// Types and methods
+pub struct Component {
+  // private fields
+}
+pub fn Component::from_json(@json.Json) -> Self raise OpError
+pub fn Component::get_path(Self) -> Array[PathSegment]
+pub fn Component::to_json(Self) -> @json.Json
+
+pub struct Engine {
+  // private fields
+}
+pub fn Engine::append(Self, Operation, Component) -> Operation raise OpError
+pub fn Engine::apply(Self, @json.Json, Operation) -> @json.Json raise OpError
+pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise OpError
+pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
+pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
+pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
+pub fn Engine::invert(Self, Operation) -> Operation raise OpError
+pub fn Engine::invert_component(Self, Component) -> Component raise OpError
+pub fn Engine::new() -> Self
+pub fn Engine::normalize(Self, @json.Json) -> Operation raise OpError
+pub fn Engine::register_subtype(Self, String, Subtype) -> Unit
+pub fn Engine::transform(Self, Operation, Operation, Side) -> Operation raise OpError
+pub fn Engine::transform_component(Self, Component, Component, Side) -> Operation raise OpError
+pub fn Engine::transform_x(Self, Operation, Operation) -> (Operation, Operation) raise OpError
+
+pub struct Operation {
+  // private fields
+}
+pub fn Operation::from_components(Array[Component]) -> Self
+pub fn Operation::from_json(@json.Json) -> Self raise OpError
+pub fn Operation::get_components(Self) -> Array[Component]
+pub fn Operation::length(Self) -> Int32
+pub fn Operation::parse(String) -> Self raise OpError
+pub fn Operation::shatter(Self) -> Array[Self]
+pub fn Operation::stringify(Self) -> String raise OpError
+pub fn Operation::to_json(Self) -> @json.Json
+
+#derive(Eq, @debug.Debug)
+pub(all) enum PathSegment {
+  Key(String)
+  Index(Int32)
+}
+pub fn PathSegment::equal(Self, Self) -> Bool
+pub fn PathSegment::not_equal(Self, Self) -> Bool
+pub fn PathSegment::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Side {
+  Left
+  Right
+}
+pub fn Side::equal(Self, Self) -> Bool
+pub fn Side::not_equal(Self, Self) -> Bool
+pub fn Side::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Subtype {
+  apply : (@json.Json, @json.Json) -> @json.Json raise OpError
+  compose : (@json.Json, @json.Json) -> @json.Json raise OpError
+  invert : (@json.Json) -> @json.Json raise OpError
+  transform : (@json.Json, @json.Json, Side) -> @json.Json raise OpError
+}
+
+// Type aliases
+
+// Traits
