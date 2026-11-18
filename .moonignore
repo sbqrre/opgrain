@@ -1,4 +1,5 @@
 /.github/
 /test/oracle/
+/test/driver/
 /*_test.mbt
 /*_wbtest.mbt
