@@ -74,6 +74,14 @@ pub(all) suberror OpError {
 pub fn OpError::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub(all) suberror TrackingError {
+  InvalidLocation(Int32, Array[PathSegment], OpError)
+  TrackingSnapshotFailed(OpError)
+  TrackingApplyFailed(Int32, VerificationError)
+}
+pub fn TrackingError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub(all) suberror VerificationError {
   InvalidSnapshot(OpError)
   ComponentFailed(Int32, Array[PathSegment], OpError)
@@ -119,6 +127,8 @@ pub struct Engine {
 pub fn Engine::append(Self, Operation, Component) -> Operation raise OpError
 pub fn Engine::apply(Self, @json.Json, Operation) -> @json.Json raise OpError
 pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise OpError
+pub fn Engine::apply_tracked(Self, @json.Json?, Operation, Array[Location]) -> TrackedApply raise TrackingError
+pub fn Engine::apply_tracked_batches(Self, @json.Json?, Array[Operation], Array[Location]) -> TrackedApply raise TrackingError
 pub fn Engine::apply_verified(Self, @json.Json?, Operation) -> @json.Json? raise VerificationError
 pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
 pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
@@ -151,6 +161,15 @@ pub(all) enum HistoryPhase {
 }
 pub fn HistoryPhase::to_repr(Self) -> @debug.Repr
 
+#derive(Eq, @debug.Debug)
+pub(all) enum InsertionAffinity {
+  BeforeInsertion
+  AfterInsertion
+}
+pub fn InsertionAffinity::equal(Self, Self) -> Bool
+pub fn InsertionAffinity::not_equal(Self, Self) -> Bool
+pub fn InsertionAffinity::to_repr(Self) -> @debug.Repr
+
 pub struct Journal {
   // private fields
 }
@@ -163,6 +182,36 @@ pub fn Journal::revert(Self, Int32, Int32, text_encoding? : TextEncoding?) -> In
 pub fn Journal::snapshot(Self) -> @json.Json?
 pub fn Journal::snapshot_at(Self, Int32) -> @json.Json? raise HistoryError
 pub fn Journal::undo_operation(Self, Int32, Int32) -> Operation raise HistoryError
+
+#derive(Eq, @debug.Debug)
+pub(all) enum Location {
+  Node(Array[PathSegment])
+  Cursor(Array[PathSegment], TextPosition)
+  TextRange(Array[PathSegment], TextPosition, TextPosition)
+}
+pub fn Location::equal(Self, Self) -> Bool
+pub fn Location::not_equal(Self, Self) -> Bool
+pub fn Location::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) struct LocationLoss {
+  batch : Int32
+  component : Int32
+  reason : LossReason
+}
+pub fn LocationLoss::equal(Self, Self) -> Bool
+pub fn LocationLoss::not_equal(Self, Self) -> Bool
+pub fn LocationLoss::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) enum LossReason {
+  ListItemRemoved
+  NodeOverwritten
+  OpaqueSubtype
+}
+pub fn LossReason::equal(Self, Self) -> Bool
+pub fn LossReason::not_equal(Self, Self) -> Bool
+pub fn LossReason::to_repr(Self) -> @debug.Repr
 
 pub struct Operation {
   // private fields
@@ -209,6 +258,22 @@ pub(all) enum TextEncoding {
 pub fn TextEncoding::equal(Self, Self) -> Bool
 pub fn TextEncoding::not_equal(Self, Self) -> Bool
 pub fn TextEncoding::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) struct TextPosition {
+  offset : Int32
+  affinity : InsertionAffinity
+}
+pub fn TextPosition::equal(Self, Self) -> Bool
+pub fn TextPosition::not_equal(Self, Self) -> Bool
+pub fn TextPosition::to_repr(Self) -> @debug.Repr
+
+pub struct TrackedApply {
+  // private fields
+}
+pub fn TrackedApply::locations(Self) -> Array[Location?]
+pub fn TrackedApply::losses(Self) -> Array[LocationLoss?]
+pub fn TrackedApply::snapshot(Self) -> @json.Json?
 
 pub struct TransformedHistories {
   // private fields
