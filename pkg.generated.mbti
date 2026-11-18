@@ -47,6 +47,20 @@ pub let uri : String
 
 // Errors
 #derive(@debug.Debug)
+pub(all) suberror HistoryError {
+  InvalidHistorySnapshot(OpError)
+  HistoryEncodingFailed(Side, Int32, OpError)
+  HistoryTransformFailed(Int32, Int32, OpError)
+  HistoryApplyFailed(HistoryPhase, Side, Int32, VerificationError)
+  DivergentHistory(@json.Json?, @json.Json?)
+  InvalidRevisionRange(Int32, Int32, Int32)
+  HistoryInvertFailed(Int32, OpError)
+  HistoryUndoFailed(Int32, VerificationError)
+  HistoryUndoMismatch(@json.Json?, @json.Json?)
+}
+pub fn HistoryError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub(all) suberror OpError {
   InvalidJson(String)
   InvalidComponent(Int32, String)
@@ -113,12 +127,42 @@ pub fn Engine::draft(Self, @json.Json?) -> Draft raise OpError
 pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
 pub fn Engine::invert(Self, Operation) -> Operation raise OpError
 pub fn Engine::invert_component(Self, Component) -> Component raise OpError
+pub fn Engine::journal(Self, @json.Json?) -> Journal raise HistoryError
+pub fn Engine::merge_histories(Self, @json.Json?, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
 pub fn Engine::new() -> Self
 pub fn Engine::normalize(Self, @json.Json) -> Operation raise OpError
+pub fn Engine::reencode_text(Self, Operation, TextEncoding) -> Operation raise OpError
 pub fn Engine::register_subtype(Self, String, Subtype) -> Unit
 pub fn Engine::transform(Self, Operation, Operation, Side) -> Operation raise OpError
 pub fn Engine::transform_component(Self, Component, Component, Side) -> Operation raise OpError
+pub fn Engine::transform_histories(Self, Array[Operation], Array[Operation]) -> TransformedHistories raise HistoryError
 pub fn Engine::transform_x(Self, Operation, Operation) -> (Operation, Operation) raise OpError
+
+pub struct HistoryMerge {
+  // private fields
+}
+pub fn HistoryMerge::histories(Self) -> TransformedHistories
+pub fn HistoryMerge::snapshot(Self) -> @json.Json?
+
+#derive(@debug.Debug)
+pub(all) enum HistoryPhase {
+  Original
+  Transformed
+}
+pub fn HistoryPhase::to_repr(Self) -> @debug.Repr
+
+pub struct Journal {
+  // private fields
+}
+pub fn Journal::append(Self, Operation) -> Int32 raise HistoryError
+pub fn Journal::append_all(Self, Array[Operation]) -> Int32 raise HistoryError
+pub fn Journal::head(Self) -> Int32
+pub fn Journal::integrate(Self, Int32, Array[Operation], text_encoding? : TextEncoding?) -> Int32 raise HistoryError
+pub fn Journal::operations(Self, Int32, Int32) -> Array[Operation] raise HistoryError
+pub fn Journal::revert(Self, Int32, Int32, text_encoding? : TextEncoding?) -> Int32 raise HistoryError
+pub fn Journal::snapshot(Self) -> @json.Json?
+pub fn Journal::snapshot_at(Self, Int32) -> @json.Json? raise HistoryError
+pub fn Journal::undo_operation(Self, Int32, Int32) -> Operation raise HistoryError
 
 pub struct Operation {
   // private fields
@@ -165,6 +209,12 @@ pub(all) enum TextEncoding {
 pub fn TextEncoding::equal(Self, Self) -> Bool
 pub fn TextEncoding::not_equal(Self, Self) -> Bool
 pub fn TextEncoding::to_repr(Self) -> @debug.Repr
+
+pub struct TransformedHistories {
+  // private fields
+}
+pub fn TransformedHistories::left_after_right(Self) -> Array[Operation]
+pub fn TransformedHistories::right_after_left(Self) -> Array[Operation]
 
 // Type aliases
 
