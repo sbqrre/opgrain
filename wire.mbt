@@ -60,15 +60,44 @@ fn WireReader::escape(self : WireReader) -> Int32 raise OpError {
 }
 
 ///|
+fn is_surrogate(unit : Int32) -> Bool {
+  unit >= 0xD800 && unit <= 0xDFFF
+}
+
+///|
+const WIRE_MARKER : Int32 = 0xE000
+
+///|
+fn write_shielded_unit(out : StringBuilder, unit : Int32) -> Unit {
+  if is_surrogate(unit) || unit == WIRE_MARKER {
+    out.write_string("\\ue000")
+    write_hex_unit(out, unit)
+  } else if unit < 0x20 || unit == 0x22 || unit == 0x5C {
+    out.write_string("\\u")
+    write_hex_unit(out, unit)
+  } else {
+    out.write_char(unit.unsafe_to_char())
+  }
+}
+
+///|
 fn unpack_units(encoded : String) -> String raise OpError {
+  if !encoded.contains_code_unit(0xE000) {
+    return encoded
+  }
   let units = []
-  for offset in 0..<(encoded.length() / 4) {
-    let mut unit = 0
-    for i in 0..<4 {
-      unit = unit * 16 +
-        hex_digit(encoded.code_unit_at(offset * 4 + i).to_int())
+  let reader = WireReader::{ input: encoded, offset: 0, }
+  while reader.offset < encoded.length() {
+    let unit = reader.take()
+    if unit == WIRE_MARKER {
+      let mut literal = 0
+      for _ in 0..<4 {
+        literal = literal * 16 + hex_digit(reader.take())
+      }
+      units.push(literal.unsafe_to_char())
+    } else {
+      units.push(unit.unsafe_to_char())
     }
-    units.push(unit.unsafe_to_char())
   }
   String::from_array(units)
 }
@@ -102,7 +131,7 @@ pub fn parse_json(source : String) -> Json raise OpError {
   while reader.offset < source.length() {
     let unit = reader.take()
     if unit == 0x22 {
-      // Shield string code units from the standard parser's scalar checks.
+      // Reserve the marker in each string before passing its grammar to core/json.
       out.write_char('"')
       while true {
         let next = reader.take()
@@ -113,7 +142,7 @@ pub fn parse_json(source : String) -> Json raise OpError {
           raise InvalidJson("unescaped control in string")
         }
         let decoded = if next == 0x5C { reader.escape() } else { next }
-        write_hex_unit(out, decoded)
+        write_shielded_unit(out, decoded)
       }
       out.write_char('"')
     } else {
