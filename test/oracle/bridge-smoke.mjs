@@ -9,6 +9,7 @@ const requests = [
   { command: "apply", snapshot: card, op: right },
   { command: "transformX", op: left, other: right },
   { command: "invert", op: right },
+  { command: "invert", op: [{ p: [], na: 0 }] },
   { command: "compose", op: right, other: [{ p: ["tasks", 0, "title", 1], si: "!" }] },
   { command: "normalize", op: { na: 1 } },
   { command: "apply", snapshot: null, op: [{ p: [], od: null }] },
@@ -18,7 +19,9 @@ const requests = [
 const responses = runMoon(requests);
 for (const [index, request] of requests.entries()) {
   const value = evaluate(request);
-  const expected = value === undefined ? { present: false } : { present: true, value };
+  const expected = value === undefined
+    ? { present: false }
+    : { present: true, value: JSON.parse(JSON.stringify(value)) };
   assert.deepEqual(responses[index], expected, request.command);
 }
 

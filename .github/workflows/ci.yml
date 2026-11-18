@@ -47,3 +47,9 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm test
       - run: npm run fixtures -- --check
+      - name: Install MoonBit for live exchange
+        run: |
+          curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
+          echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
+      - run: npm run bridge
+      - run: npm run live
