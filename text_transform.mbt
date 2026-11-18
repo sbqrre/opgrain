@@ -7,6 +7,22 @@ fn shift_text_position(position : Int32, length : Int32) -> Int32 raise OpError 
 }
 
 ///|
+pub fn text0_transform_cursor(
+  position : Int32,
+  op : Json,
+  side~ : Side = Left,
+) -> Int32 raise OpError {
+  guard position >= 0 else {
+    raise InvalidComponent(0, "negative cursor position")
+  }
+  let mut position = position
+  for edit in decode_text0(op) {
+    position = transform_position(position, edit, side)
+  }
+  position
+}
+
+///|
 fn transform_position(
   position : Int32,
   other : TextEdit,

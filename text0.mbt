@@ -111,3 +111,26 @@ fn edit_string(
   }
   code_slice(text, 0, position) + code_slice(text, end, text.length())
 }
+
+///|
+pub fn text0_normalize(value : Json) -> Json raise OpError {
+  let inputs = match value {
+    Array(items) => items
+    Object(fields) if fields.get("i") is Some(_) || fields.get("p") is Some(_) =>
+      [value]
+    Object(_) => []
+    _ => raise InvalidComponent(0, "text0 expects an operation")
+  }
+  let output = []
+  for item in inputs {
+    guard copy_json(item) is Object(fields) else {
+      raise InvalidComponent(0, "text0 component must be an object")
+    }
+    if fields.get("p") is None || fields.get("p") is Some(Null) {
+      fields["p"] = Json::number(0.0)
+    }
+    let edits = decode_text0(Json::array([Json::object(fields)]))
+    append_text0(output, edits[0])
+  }
+  encode_text0(output)
+}

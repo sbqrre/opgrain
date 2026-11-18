@@ -108,6 +108,25 @@ fn segment(path : Array[PathSegment], index : Int32) -> PathSegment? {
 }
 
 ///|
+pub fn common_length_for_ops(a : Component, b : Component) -> Int32? {
+  common_length(a.path, operand_length(a), b.path, operand_length(b))
+}
+
+///|
+pub fn Engine::transform_component(
+  self : Engine,
+  c : Component,
+  other : Component,
+  side : Side,
+) -> Operation raise OpError {
+  self.ensure_registered(c)
+  self.ensure_registered(other)
+  let components = []
+  self.transform_one(components, c, other, side)
+  { components, }
+}
+
+///|
 pub fn can_op_affect_path(op : Operation, path : Array[PathSegment]) -> Bool {
   op.components.any(c => {
     common_length(path, path.length(), c.path, operand_length(c)) is Some(_)

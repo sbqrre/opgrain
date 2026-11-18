@@ -161,6 +161,15 @@ pub fn compose(
 }
 
 ///|
+pub fn Engine::append(
+  self : Engine,
+  dest : Operation,
+  component : Component,
+) -> Operation raise OpError {
+  self.compose(dest, { components: [component], })
+}
+
+///|
 pub fn Engine::normalize(
   self : Engine,
   value : Json,

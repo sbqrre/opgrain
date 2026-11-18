@@ -26,11 +26,12 @@ pub extend Side with @debug.Debug::{to_repr}
 
 ///|
 #derive(Debug)
-pub suberror OpError {
+pub(all) suberror OpError {
   InvalidJson(String)
   InvalidComponent(Int32, String)
   InvalidPath(Array[PathSegment], String)
   UnknownSubtype(String)
+  SubtypeError(String, String)
   TextMismatch(Int32)
   NonFiniteNumber
   MissingRoot
@@ -50,9 +51,9 @@ priv enum Action {
 }
 
 ///|
-priv struct Component {
-  path : Array[PathSegment]
-  action : Action
+pub struct Component {
+  priv path : Array[PathSegment]
+  priv action : Action
 }
 
 ///|
@@ -234,6 +235,31 @@ fn encode_component(component : Component) -> Json {
     }
   }
   Json::object(fields)
+}
+
+///|
+pub fn Component::from_json(value : Json) -> Component raise OpError {
+  decode_component(value, 0, default_path=false)
+}
+
+///|
+pub fn Component::to_json(self : Component) -> Json {
+  encode_component(self)
+}
+
+///|
+pub fn Component::get_path(self : Component) -> Array[PathSegment] {
+  self.path.copy()
+}
+
+///|
+pub fn Operation::from_components(components : Array[Component]) -> Operation {
+  { components: components.copy(), }
+}
+
+///|
+pub fn Operation::get_components(self : Operation) -> Array[Component] {
+  self.components.copy()
 }
 
 ///|

@@ -125,10 +125,23 @@ fn Engine::apply_component(
       })
     LegacyText(insert, text) =>
       update_at(snapshot, path, length - 1, 0, value => {
-        guard value is String(value) && path[length - 1] is Index(position) else {
+        guard path[length - 1] is Index(position) else {
           raise InvalidPath(path.copy(), "legacy text edit requires a string")
         }
-        Json::string(edit_string(value, { position, insert, text, }, path))
+        let edit = TextEdit::{ position, insert, text, }
+        match self.subtypes.get("text0") {
+          Some(subtype) =>
+            copy_json((subtype.apply)(copy_json(value), encode_text0([edit])))
+          None => {
+            guard value is String(value) else {
+              raise InvalidPath(
+                path.copy(),
+                "legacy text edit requires a string",
+              )
+            }
+            Json::string(edit_string(value, edit, path))
+          }
+        }
       })
     SubtypeEdit(kind, payload) =>
       update_at(snapshot, path, length, 0, value => {
@@ -150,6 +163,17 @@ fn Engine::apply_component(
       })
   }
   Some(output)
+}
+
+///|
+pub fn Engine::check_valid_op(
+  self : Engine,
+  value : Json,
+) -> Unit raise OpError {
+  let op = Operation::from_json(value)
+  for c in op.components {
+    self.ensure_registered(c)
+  }
 }
 
 ///|

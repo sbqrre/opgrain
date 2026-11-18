@@ -1,5 +1,5 @@
 ///|
-fn Engine::invert_component(
+pub fn Engine::invert_component(
   self : Engine,
   component : Component,
 ) -> Component raise OpError {
