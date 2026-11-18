@@ -59,6 +59,14 @@ pub(all) suberror OpError {
 }
 pub fn OpError::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
+pub(all) suberror VerificationError {
+  InvalidSnapshot(OpError)
+  ComponentFailed(Int32, Array[PathSegment], OpError)
+  StalePreimage(Int32, Array[PathSegment], @json.Json?, @json.Json?)
+}
+pub fn VerificationError::to_repr(Self) -> @debug.Repr
+
 // Types and methods
 pub struct Component {
   // private fields
@@ -67,14 +75,32 @@ pub fn Component::from_json(@json.Json) -> Self raise OpError
 pub fn Component::get_path(Self) -> Array[PathSegment]
 pub fn Component::to_json(Self) -> @json.Json
 
+pub struct Draft {
+  // private fields
+}
+pub fn Draft::add_number(Self, Array[PathSegment], Double) -> Unit raise OpError
+pub fn Draft::append(Self, Operation) -> Unit raise VerificationError
+pub fn Draft::insert_item(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
+pub fn Draft::move_item(Self, Array[PathSegment], Int32) -> Unit raise OpError
+pub fn Draft::operation(Self) -> Operation
+pub fn Draft::read(Self, Array[PathSegment]) -> @json.Json raise OpError
+pub fn Draft::remove(Self, Array[PathSegment]) -> Unit raise OpError
+pub fn Draft::remove_item(Self, Array[PathSegment]) -> Unit raise OpError
+pub fn Draft::replace_item(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
+pub fn Draft::set(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
+pub fn Draft::snapshot(Self) -> @json.Json?
+pub fn Draft::splice_text(Self, Array[PathSegment], Int32, Int32, String, encoding? : TextEncoding) -> Unit raise OpError
+
 pub struct Engine {
   // private fields
 }
 pub fn Engine::append(Self, Operation, Component) -> Operation raise OpError
 pub fn Engine::apply(Self, @json.Json, Operation) -> @json.Json raise OpError
 pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise OpError
+pub fn Engine::apply_verified(Self, @json.Json?, Operation) -> @json.Json? raise VerificationError
 pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
 pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
+pub fn Engine::draft(Self, @json.Json?) -> Draft raise OpError
 pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
 pub fn Engine::invert(Self, Operation) -> Operation raise OpError
 pub fn Engine::invert_component(Self, Component) -> Component raise OpError
@@ -121,6 +147,15 @@ pub(all) struct Subtype {
   invert : (@json.Json) -> @json.Json raise OpError
   transform : (@json.Json, @json.Json, Side) -> @json.Json raise OpError
 }
+
+#derive(Eq, @debug.Debug)
+pub(all) enum TextEncoding {
+  Legacy
+  Text0
+}
+pub fn TextEncoding::equal(Self, Self) -> Bool
+pub fn TextEncoding::not_equal(Self, Self) -> Bool
+pub fn TextEncoding::to_repr(Self) -> @debug.Repr
 
 // Type aliases
 
