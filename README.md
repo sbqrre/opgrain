@@ -48,6 +48,8 @@ println(@opgrain.stringify_json(next))
 npm --prefix test/oracle ci --ignore-scripts
 npm --prefix test/oracle test
 npm --prefix test/oracle run fixtures -- --check
+npm --prefix test/oracle run live
+npm --prefix test/oracle run package-smoke
 moon test --frozen --deny-warn --target native
 moon test --frozen --deny-warn --target js
 moon test --frozen --deny-warn --target wasm

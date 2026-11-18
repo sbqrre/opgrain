@@ -21,3 +21,7 @@ node test/oracle/reduce.mjs < counterexample.json
 ```
 
 缩减器尝试移除组件和根对象中无关的字段，每一步都会重新验证操作在上游可应用，并保留原来的失败类别。它把结果写到标准输出。多步操作需要保留差分报告中的初始 `snapshot`。
+
+## 验证打包产物
+
+`npm --prefix test/oracle run package-smoke` 运行 `moon package --frozen`，检查压缩包包含库、README 和许可证，并排除测试驱动与 CI 配置。脚本把压缩包解开到独立工作区，由另一个 MoonBit 模块导入它，并执行同位置插入的并发转换。验证对象是打包后交付给调用方的模块。

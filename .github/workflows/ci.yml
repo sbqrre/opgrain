@@ -32,7 +32,7 @@ jobs:
         run: moon run examples/board --target "${{ matrix.target }}" --frozen
 
   oracle:
-    name: Node / pinned upstream
+    name: Node / interoperability and packaging
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -54,3 +54,4 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - run: npm run bridge
       - run: npm run live
+      - run: npm run package-smoke
