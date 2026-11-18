@@ -43,6 +43,53 @@ fn decode_text0(value : Json) -> Array[TextEdit] raise OpError {
 }
 
 ///|
+fn encode_text0(edits : Array[TextEdit]) -> Json {
+  Json::array(
+    edits.map(edit => {
+      let fields = Map([])
+      fields["p"] = Json::number(edit.position.to_double())
+      fields[if edit.insert { "i" } else { "d" }] = Json::string(edit.text)
+      Json::object(fields)
+    }),
+  )
+}
+
+///|
+fn append_text0(dest : Array[TextEdit], next : TextEdit) -> Unit {
+  if next.text.is_empty() {
+    return
+  }
+  if dest.last() is Some(last) {
+    let end = dest.length() - 1
+    let delta = next.position - last.position
+    if last.insert && next.insert && delta >= 0 && delta <= last.text.length() {
+      dest[end] = { ..last, text: inject(last.text, delta, next.text), }
+      return
+    }
+    if !last.insert &&
+      !next.insert &&
+      delta <= 0 &&
+      -delta <= next.text.length() {
+      dest[end] = { ..next, text: inject(next.text, -delta, last.text), }
+      return
+    }
+  }
+  dest.push(next)
+}
+
+///|
+fn compose_text0(
+  first : Array[TextEdit],
+  second : Array[TextEdit],
+) -> Array[TextEdit] {
+  let output = first.copy()
+  for edit in second {
+    append_text0(output, edit)
+  }
+  output
+}
+
+///|
 fn edit_string(
   text : String,
   edit : TextEdit,
