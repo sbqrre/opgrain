@@ -64,7 +64,8 @@ fn Engine::compose_subtype(
   b : Json,
 ) -> Json raise OpError {
   match self.subtypes.get(kind) {
-    Some(subtype) => copy_json((subtype.compose)(copy_json(a), copy_json(b)))
+    Some(subtype) =>
+      copy_checked_json((subtype.compose)(copy_json(a), copy_json(b)))
     None if kind == "text0" =>
       encode_text0(compose_text0(decode_text0(a), decode_text0(b)))
     None => raise UnknownSubtype(kind)

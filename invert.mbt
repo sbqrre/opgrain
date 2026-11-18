@@ -19,7 +19,7 @@ pub fn Engine::invert_component(
     }
     SubtypeEdit(kind, payload) => {
       let inverse = match self.subtypes.get(kind) {
-        Some(subtype) => copy_json((subtype.invert)(copy_json(payload)))
+        Some(subtype) => copy_checked_json((subtype.invert)(copy_json(payload)))
         None if kind == "text0" => {
           let edits = decode_text0(payload)
           edits.rev_in_place()

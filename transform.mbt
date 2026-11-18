@@ -389,7 +389,7 @@ fn Engine::transform_subtype(
 ) -> Json raise OpError {
   match self.subtypes.get(kind) {
     Some(subtype) =>
-      copy_json((subtype.transform)(copy_json(a), copy_json(b), side))
+      copy_checked_json((subtype.transform)(copy_json(a), copy_json(b), side))
     None if kind == "text0" =>
       encode_text0(
         transform_side(

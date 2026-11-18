@@ -131,7 +131,9 @@ fn Engine::apply_component(
         let edit = TextEdit::{ position, insert, text, }
         match self.subtypes.get("text0") {
           Some(subtype) =>
-            copy_json((subtype.apply)(copy_json(value), encode_text0([edit])))
+            copy_checked_json(
+              (subtype.apply)(copy_json(value), encode_text0([edit])),
+            )
           None => {
             guard value is String(value) else {
               raise InvalidPath(
@@ -147,7 +149,9 @@ fn Engine::apply_component(
       update_at(snapshot, path, length, 0, value => {
         match self.subtypes.get(kind) {
           Some(subtype) =>
-            copy_json((subtype.apply)(copy_json(value), copy_json(payload)))
+            copy_checked_json(
+              (subtype.apply)(copy_json(value), copy_json(payload)),
+            )
           None if kind == "text0" => {
             guard value is String(text) else {
               raise InvalidPath(path.copy(), "text0 requires a string")
@@ -183,7 +187,7 @@ pub fn Engine::apply_optional(
   snapshot : Json?,
   op : Operation,
 ) -> Json? raise OpError {
-  let mut result = snapshot.map(copy_json)
+  let mut result = snapshot.map(copy_checked_json)
   for component in op.components {
     result = self.apply_component(result, component)
   }
@@ -214,7 +218,7 @@ pub fn Engine::incremental_apply(
   op : Operation,
   on_step : (Operation, Json?) -> Unit,
 ) -> Json? raise OpError {
-  let mut result = snapshot.map(copy_json)
+  let mut result = snapshot.map(copy_checked_json)
   for component in op.components {
     result = self.apply_component(result, component)
     on_step({ components: [component], }, result.map(copy_json))

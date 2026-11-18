@@ -210,6 +210,7 @@ fn write_wire(out : StringBuilder, value : Json) -> Unit raise OpError {
 ///|
 /// Write JSON with a reversible escape for every non-ASCII code unit.
 pub fn stringify_json(value : Json) -> String raise OpError {
+  validate_json_value(value, [])
   let out = StringBuilder()
   write_wire(out, value)
   out.to_string()

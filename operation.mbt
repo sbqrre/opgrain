@@ -174,14 +174,14 @@ fn decode_component(
       guard path.last() is Some(Index(_)) else {
         raise InvalidComponent(index, "list path must end in an index")
       }
-      ListEdit(li.map(copy_json), ld.map(copy_json))
+      ListEdit(li.map(copy_checked_json), ld.map(copy_checked_json))
     }
     (_, _, Some(_), _, _, _, _, _, _, _)
     | (_, _, _, Some(_), _, _, _, _, _, _) => {
       guard path.is_empty() || path.last() is Some(Key(_)) else {
         raise InvalidComponent(index, "object path must end in a key")
       }
-      ObjectEdit(oi.map(copy_json), od.map(copy_json))
+      ObjectEdit(oi.map(copy_checked_json), od.map(copy_checked_json))
     }
     (_, _, _, _, Some(Number(amount, ..)), _, _, _, _, _) =>
       Add(checked_number(amount))
@@ -199,7 +199,7 @@ fn decode_component(
       LegacyText(si is Some(_), text)
     }
     (_, _, _, _, _, _, _, _, Some(String(kind)), Some(payload)) if !kind.is_empty() =>
-      SubtypeEdit(kind, copy_json(payload))
+      SubtypeEdit(kind, copy_checked_json(payload))
     _ => raise InvalidComponent(index, "invalid instruction payload")
   }
   { path, action, }
