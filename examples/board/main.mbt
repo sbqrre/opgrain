@@ -65,8 +65,64 @@ fn show_board() -> Unit raise @opgrain.OpError {
 }
 
 ///|
+fn show_revision() -> Unit raise {
+  let engine = @opgrain.Engine::new()
+  let initial_wire =
+    #|{"tasks":[{"id":"review","title":"Review"},{"id":"publish","title":"Publish"}]}
+  let moved_wire =
+    #|{"tasks":[{"id":"publish","title":"Publish"},{"id":"review","title":"Review"}]}
+  let base = Some(@opgrain.parse_json(initial_wire))
+  let moved = Some(@opgrain.parse_json(moved_wire))
+  let options = {
+    ..@opgrain.DiffOptions::default(),
+    list_identity_key: Some("id"),
+  }
+  let move_operation = engine.diff(base, moved, options~)
+  let remote = engine.draft(base)
+  remote.splice_text([Key("tasks"), Index(0), Key("title")], 6, 0, "!")
+  let journal = engine.journal(base)
+  ignore(journal.append(move_operation))
+  ignore(journal.integrate(0, [remote.operation()]))
+  let expected =
+    #|{"tasks":[{"id":"publish","title":"Publish"},{"id":"review","title":"Review!"}]}
+  guard journal.snapshot() is Some(merged) &&
+    merged == @opgrain.parse_json(expected) else {
+    abort("离线编辑合并后的看板不匹配")
+  }
+  let cursor : @opgrain.TextPosition = { offset: 6, affinity: AfterInsertion, }
+  let tracked = engine.apply_tracked_batches(
+    base,
+    journal.operations(0, journal.head()),
+    [Cursor([Key("tasks"), Index(0), Key("title")], cursor)],
+  )
+  guard tracked.locations() ==
+    [
+      Some(
+        Cursor([Key("tasks"), Index(1), Key("title")], { ..cursor, offset: 7, }),
+      ),
+    ] else {
+    abort("标题光标应随卡片移动，并跳到插入的感叹号之后")
+  }
+  ignore(journal.revert(0, 1))
+  let restored_wire =
+    #|{"tasks":[{"id":"review","title":"Review!"},{"id":"publish","title":"Publish"}]}
+  guard journal.snapshot() == Some(@opgrain.parse_json(restored_wire)) else {
+    abort("撤销移动应保留另一端的标题编辑")
+  }
+  println(
+    "从快照生成移动，合并标题编辑，再选择性撤销移动",
+  )
+  println("移动操作 " + move_operation.stringify())
+  println("重新定位的标题光标 tasks[1].title @ 7")
+  println("撤销移动后的看板 " + restored_wire)
+}
+
+///|
 fn main {
-  show_board() catch {
+  try {
+    show_board()
+    show_revision()
+  } catch {
     error => abort(@debug.to_string(error))
   }
 }

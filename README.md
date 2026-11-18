@@ -23,7 +23,7 @@
 moon run examples/board --target js
 ```
 
-同一命令会运行以下五个案例。每个案例都校验两条执行顺序得到预期看板，并检查撤销转换后的左操作能恢复右侧状态。
+同一命令包含以下五个并发案例。每个案例都校验两条执行顺序得到预期看板，并检查撤销转换后的左操作能恢复右侧状态。
 
 | 看板案例 | 可以观察到的转换规则 |
 | --- | --- |
@@ -45,6 +45,8 @@ println(@opgrain.stringify_json(next))
 ```
 
 库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.1.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+
+处理离线看板时，可以用 `Engine::draft` 记录真实旧值，或用 `Engine::diff` 从两份快照生成 JSON0 操作。示例的第六个案例将卡片移动与离线标题编辑合并，跟随标题光标，再用 `Journal::revert` 撤销移动并保留标题编辑。详见 [快照编辑、合并与位置跟踪](docs/editing.md)。
 
 ### 互通与边界
 

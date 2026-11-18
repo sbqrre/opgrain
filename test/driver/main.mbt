@@ -42,6 +42,18 @@ fn evaluate(
   match command {
     "apply" =>
       engine.apply_optional(fields.get("snapshot"), operation(fields, "op"))
+    "diff" => {
+      let list_identity_key = match fields.get("listIdentityKey") {
+        Some(String(key)) => Some(key)
+        _ => None
+      }
+      let options = { ..@opgrain.DiffOptions::default(), list_identity_key, }
+      Some(
+        engine
+        .diff(fields.get("snapshot"), fields.get("other"), options~)
+        .to_json(),
+      )
+    }
     "compose" =>
       Some(
         engine

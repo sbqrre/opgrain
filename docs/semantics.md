@@ -26,6 +26,8 @@
 
 使用 `Engine::register_subtype` 注册 `apply`、`compose`、`invert`、`transform` 四个处理函数。回调接收独立数据副本，可以使用任意 JSON 形状的载荷。`transform` 返回空数组时删除该子类型组件，返回对象或标量时保留组件。注册同名处理器会替换现有委托。
 
+文档感知的校验、草稿、快照差量、历史合并及位置映射见 [快照编辑、合并与位置跟踪](editing.md)。
+
 ## 从源代码依赖
 
 将本库克隆到 `opgrain/`，并将调用方放在同级目录 `app/`。在共同的上级目录添加 `moon.work`。
