@@ -11,6 +11,10 @@ pub fn apply(@json.Json, Operation) -> @json.Json raise OpError
 
 pub fn can_op_affect_path(Operation, Array[PathSegment]) -> Bool
 
+pub fn check_list(@json.Json) -> Unit raise OpError
+
+pub fn check_obj(@json.Json) -> Unit raise OpError
+
 pub fn check_valid_op(@json.Json) -> Unit raise OpError
 
 pub fn common_length_for_ops(Component, Component) -> Int32?

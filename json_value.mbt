@@ -43,3 +43,37 @@ fn copy_checked_json(value : Json) -> Json raise OpError {
   validate_json_value(value, [])
   copy_json(value)
 }
+
+///|
+fn require_list(
+  value : Json,
+  path : Array[PathSegment],
+) -> Array[Json] raise OpError {
+  guard value is Array(items) else {
+    raise InvalidPath(path.copy(), "expected a list")
+  }
+  items
+}
+
+///|
+fn require_object(
+  value : Json,
+  path : Array[PathSegment],
+) -> Map[String, Json] raise OpError {
+  guard value is Object(fields) else {
+    raise InvalidPath(path.copy(), "expected an object")
+  }
+  fields
+}
+
+///|
+/// Check the operand for a JSON0 list instruction.
+pub fn check_list(value : Json) -> Unit raise OpError {
+  ignore(require_list(value, []))
+}
+
+///|
+/// Check the operand for a JSON0 object instruction.
+pub fn check_obj(value : Json) -> Unit raise OpError {
+  ignore(require_object(value, []))
+}

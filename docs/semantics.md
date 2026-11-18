@@ -22,6 +22,7 @@
 - `transform_x(a, b)` 要求两条操作基于同一文档。返回 `(a_after_b, b_after_a)`。`transform` 和 `Engine::transform_component` 接受单侧优先级。
 - `path_matches` 比较路径。`common_length_for_ops` 和 `can_op_affect_path` 提供与组件寻址规则一致的路径检查。
 - `check_valid_op` 检查 JSON0 指令形状。`Engine::check_valid_op` 也检查子类型注册状态和内置 `text0` 载荷。
+- `check_list` 和 `check_obj` 对应上游的 `checkList` 和 `checkObj`，使用与 `apply` 相同的容器检查。
 
 使用 `Engine::register_subtype` 注册 `apply`、`compose`、`invert`、`transform` 四个处理函数。回调接收独立数据副本，可以使用任意 JSON 形状的载荷。`transform` 返回空数组时删除该子类型组件，返回对象或标量时保留组件。注册同名处理器会替换现有委托。
 

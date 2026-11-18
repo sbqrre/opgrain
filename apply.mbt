@@ -78,7 +78,8 @@ fn Engine::apply_component(
       })
     ListEdit(insert, delete) =>
       update_at(snapshot, path, length - 1, 0, parent => {
-        guard parent is Array(items) && path[length - 1] is Index(index) else {
+        let items = require_list(parent, path)
+        guard path[length - 1] is Index(index) else {
           raise InvalidPath(path.copy(), "list edit requires a list")
         }
         guard index <= items.length() &&
@@ -95,7 +96,8 @@ fn Engine::apply_component(
       })
     Move(destination) =>
       update_at(snapshot, path, length - 1, 0, parent => {
-        guard parent is Array(items) && path[length - 1] is Index(source) else {
+        let items = require_list(parent, path)
+        guard path[length - 1] is Index(source) else {
           raise InvalidPath(path.copy(), "list move requires a list")
         }
         guard source < items.length() && destination < items.length() else {
@@ -109,7 +111,8 @@ fn Engine::apply_component(
       })
     ObjectEdit(insert, _) =>
       update_at(snapshot, path, length - 1, 0, parent => {
-        guard parent is Object(fields) && path[length - 1] is Key(key) else {
+        let fields = require_object(parent, path)
+        guard path[length - 1] is Key(key) else {
           raise InvalidPath(path.copy(), "object edit requires an object")
         }
         match insert {
