@@ -75,6 +75,14 @@ pub fn Component::from_json(@json.Json) -> Self raise OpError
 pub fn Component::get_path(Self) -> Array[PathSegment]
 pub fn Component::to_json(Self) -> @json.Json
 
+pub(all) struct DiffOptions {
+  text_encoding : TextEncoding
+  alignment_cells : Int32
+  list_identity_key : String?
+  prefer_number_add : Bool
+}
+pub fn DiffOptions::default() -> Self
+
 pub struct Draft {
   // private fields
 }
@@ -100,6 +108,7 @@ pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise
 pub fn Engine::apply_verified(Self, @json.Json?, Operation) -> @json.Json? raise VerificationError
 pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
 pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
+pub fn Engine::diff(Self, @json.Json?, @json.Json?, options? : DiffOptions) -> Operation raise OpError
 pub fn Engine::draft(Self, @json.Json?) -> Draft raise OpError
 pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
 pub fn Engine::invert(Self, Operation) -> Operation raise OpError
