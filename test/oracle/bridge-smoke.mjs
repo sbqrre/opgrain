@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { runMoon } from "./bridge.mjs";
-import { evaluate } from "./oracle.mjs";
+import { evaluate, wireResult } from "./oracle.mjs";
 
 const card = { tasks: [{ title: "A😀" }, { title: "B" }] };
 const left = [{ p: ["tasks", 0], lm: 1 }];
@@ -18,11 +18,7 @@ const requests = [
 ];
 const responses = runMoon(requests);
 for (const [index, request] of requests.entries()) {
-  const value = evaluate(request);
-  const expected = value === undefined
-    ? { present: false }
-    : { present: true, value: JSON.parse(JSON.stringify(value)) };
-  assert.deepEqual(responses[index], expected, request.command);
+  assert.deepEqual(responses[index], wireResult(evaluate(request)), request.command);
 }
 
 const [leftPrime, rightPrime] = responses[1].value;

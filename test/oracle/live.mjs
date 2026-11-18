@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runMoon } from "./bridge.mjs";
-import { evaluate, json0 } from "./oracle.mjs";
+import { evaluate, json0, wireResult } from "./oracle.mjs";
 
 const seed = process.env.SEED ?? "opgrain-live-1";
 process.env.SEED = seed;
@@ -24,19 +24,12 @@ const rootText = (snapshot) => {
   return [[{ p: [], t: "text0", o: text }], updated];
 };
 
-function requestValue(request) {
-  const value = evaluate(request);
-  return value === undefined
-    ? { present: false }
-    : { present: true, value: JSON.parse(JSON.stringify(value)) };
-}
-
 function compareBatch(cases, requests) {
   const actual = runMoon(requests.map(({ request }) => request));
   for (let i = 0; i < requests.length; i++) {
     const { request, label, scenario } = requests[i];
     try {
-      assert.deepEqual(actual[i], requestValue(request));
+      assert.deepEqual(actual[i], wireResult(evaluate(request)));
     } catch (cause) {
       throw new Error(`${label} failed with seed ${seed}: ${JSON.stringify({
         scenario: cases[scenario].label, snapshot: cases[scenario].snapshot,

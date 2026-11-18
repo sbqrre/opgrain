@@ -23,11 +23,14 @@ export function evaluate({ command, snapshot, op, other, side }) {
   }
 }
 
+export function wireResult(value) {
+  return value === undefined
+    ? { present: false }
+    : { present: true, value: JSON.parse(JSON.stringify(value)) };
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const requests = JSON.parse(readFileSync(0, "utf8"));
-  const results = requests.map((request) => {
-    const value = evaluate(request);
-    return value === undefined ? { present: false } : { present: true, value };
-  });
+  const results = requests.map((request) => wireResult(evaluate(request)));
   process.stdout.write(JSON.stringify(results) + "\n");
 }
