@@ -197,46 +197,51 @@ fn write_wire_string(out : StringBuilder, value : String) -> Unit {
 ///|
 priv enum WireTask {
   Value(Json)
-  Punctuation(Char)
-  Key(String)
+  ArrayTail(Array[Json], Int32)
+  ObjectTail(Iter[(String, Json)], Bool)
 }
 
 ///|
-fn write_wire(out : StringBuilder, value : Json) -> Unit raise OpError {
+fn write_wire_iterative(
+  out : StringBuilder,
+  value : Json,
+) -> Unit raise OpError {
   let tasks = [WireTask::Value(value)]
   while tasks.pop() is Some(task) {
     match task {
-      Punctuation(character) => out.write_char(character)
-      Key(key) => write_wire_string(out, key)
+      ArrayTail(items, index) =>
+        if index == items.length() {
+          out.write_char(']')
+        } else {
+          if index != 0 {
+            out.write_char(',')
+          }
+          tasks.push(ArrayTail(items, index + 1))
+          tasks.push(Value(items[index]))
+        }
+      ObjectTail(members, first) =>
+        match members.next() {
+          None => out.write_char('}')
+          Some((key, child)) => {
+            if !first {
+              out.write_char(',')
+            }
+            write_wire_string(out, key)
+            out.write_char(':')
+            tasks.push(ObjectTail(members, false))
+            tasks.push(Value(child))
+          }
+        }
       Value(value) =>
         match value {
           String(text) => write_wire_string(out, text)
           Array(items) => {
             out.write_char('[')
-            tasks.push(Punctuation(']'))
-            for i = items.length() - 1; i >= 0; i = i - 1 {
-              tasks.push(Value(items[i]))
-              if i != 0 {
-                tasks.push(Punctuation(','))
-              }
-            }
+            tasks.push(ArrayTail(items, 0))
           }
           Object(fields) => {
             out.write_char('{')
-            tasks.push(Punctuation('}'))
-            let members = []
-            for key, child in fields {
-              members.push((key, child))
-            }
-            for i = members.length() - 1; i >= 0; i = i - 1 {
-              let (key, child) = members[i]
-              tasks.push(Value(child))
-              tasks.push(Punctuation(':'))
-              tasks.push(Key(key))
-              if i != 0 {
-                tasks.push(Punctuation(','))
-              }
-            }
+            tasks.push(ObjectTail(fields.iter(), true))
           }
           Number(n, ..) => {
             ignore(checked_number(n))
@@ -255,4 +260,53 @@ pub fn stringify_json(value : Json) -> String raise OpError {
   let out = StringBuilder()
   write_wire(out, value)
   out.to_string()
+}
+
+///|
+fn write_wire_depth(
+  out : StringBuilder,
+  value : Json,
+  depth : Int32,
+) -> Unit raise OpError {
+  if depth == 64 {
+    write_wire_iterative(out, value)
+    return
+  }
+  match value {
+    Object(fields) => {
+      out.write_char('{')
+      let mut first = true
+      for key, child in fields {
+        if !first {
+          out.write_char(',')
+        }
+        first = false
+        write_wire_string(out, key)
+        out.write_char(':')
+        write_wire_depth(out, child, depth + 1)
+      }
+      out.write_char('}')
+    }
+    Array(items) => {
+      out.write_char('[')
+      for index, child in items {
+        if index != 0 {
+          out.write_char(',')
+        }
+        write_wire_depth(out, child, depth + 1)
+      }
+      out.write_char(']')
+    }
+    String(text) => write_wire_string(out, text)
+    Number(n, ..) => {
+      ignore(checked_number(n))
+      out.write_string(Json::number(n).stringify())
+    }
+    _ => out.write_string(value.stringify())
+  }
+}
+
+///|
+fn write_wire(out : StringBuilder, value : Json) -> Unit raise OpError {
+  write_wire_depth(out, value, 0)
 }

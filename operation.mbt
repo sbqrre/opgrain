@@ -79,14 +79,14 @@ fn shallow_copy(value : Json) -> Json {
 }
 
 ///|
-fn copy_json(value : Json) -> Json {
-  let root = shallow_copy(value)
+fn copy_json_iterative(value : Json) -> Json {
+  let root = empty_copy(value)
   let pending = [(value, root)]
   while pending.pop() is Some((source, target)) {
     match (source, target) {
       (Object(fields), Object(output)) =>
         for key, child in fields {
-          let cloned = shallow_copy(child)
+          let cloned = empty_copy(child)
           output[key] = cloned
           match child {
             Object(_) | Array(_) => pending.push((child, cloned))
@@ -94,9 +94,9 @@ fn copy_json(value : Json) -> Json {
           }
         }
       (Array(items), Array(output)) =>
-        for index, child in items {
-          let cloned = shallow_copy(child)
-          output[index] = cloned
+        for child in items {
+          let cloned = empty_copy(child)
+          output.push(cloned)
           match child {
             Object(_) | Array(_) => pending.push((child, cloned))
             _ => ()
@@ -332,4 +332,28 @@ pub fn check_valid_op(value : Json) -> Unit raise OpError {
 ///|
 pub fn create(data~ : Json = Json::null()) -> Json {
   copy_json(data)
+}
+
+///|
+fn copy_json_depth(value : Json, depth : Int32) -> Json {
+  if depth == 64 {
+    return copy_json_iterative(value)
+  }
+  match value {
+    Object(fields) => {
+      let output = Map([])
+      for key, child in fields {
+        output[key] = copy_json_depth(child, depth + 1)
+      }
+      Json::object(output)
+    }
+    Array(items) =>
+      Json::array(items.map(child => copy_json_depth(child, depth + 1)))
+    _ => value
+  }
+}
+
+///|
+fn copy_json(value : Json) -> Json {
+  copy_json_depth(value, 0)
 }
