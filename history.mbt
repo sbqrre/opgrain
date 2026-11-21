@@ -12,6 +12,8 @@ pub extend HistoryPhase with @debug.Debug::{to_repr}
 #derive(@debug.Debug)
 pub(all) suberror HistoryError {
   InvalidHistorySnapshot(OpError)
+  HistoryBusy
+  RevisionOverflow
   HistoryEncodingFailed(Side, Int32, OpError)
   HistoryTransformFailed(Int32, Int32, OpError)
   HistoryApplyFailed(HistoryPhase, Side, Int32, VerificationError)
@@ -78,7 +80,7 @@ pub fn Engine::transform_histories(
 ///|
 pub struct HistoryMerge {
   priv histories : TransformedHistories
-  priv snapshot : Json?
+  priv snapshot : Snapshot
 }
 
 ///|
@@ -88,7 +90,7 @@ pub fn HistoryMerge::histories(self : HistoryMerge) -> TransformedHistories {
 
 ///|
 pub fn HistoryMerge::snapshot(self : HistoryMerge) -> Json? {
-  self.snapshot.map(copy_json)
+  self.snapshot.to_json()
 }
 
 ///|
@@ -112,19 +114,15 @@ fn Engine::prepare_history(
 ///|
 fn Engine::replay_history(
   self : Engine,
-  snapshot : Json?,
+  snapshot : Snapshot,
   operations : Array[Operation],
   phase : HistoryPhase,
   side : Side,
-) -> Json? raise HistoryError {
-  let mut updated = snapshot.map(copy_checked_json) catch {
-    error => raise InvalidHistorySnapshot(error)
-  }
+) -> Snapshot raise HistoryError {
+  let mut updated = snapshot
   for index, operation in operations {
-    for component_index, component in operation.components {
-      updated = self.verify_component(updated, component, component_index) catch {
-        error => raise HistoryApplyFailed(phase, side, index, error)
-      }
+    updated = self.apply_snapshot_verified(updated, operation) catch {
+      error => raise HistoryApplyFailed(phase, side, index, error)
     }
   }
   updated
@@ -132,9 +130,9 @@ fn Engine::replay_history(
 
 ///|
 /// Validate each path through the merge and return only a converged snapshot.
-pub fn Engine::merge_histories(
+pub fn Engine::merge_snapshot_histories(
   self : Engine,
-  base : Json?,
+  base : Snapshot,
   left : Array[Operation],
   right : Array[Operation],
   text_encoding~ : TextEncoding? = None,
@@ -156,8 +154,27 @@ pub fn Engine::merge_histories(
     Transformed,
     Left,
   )
-  guard left_first == right_first else {
-    raise DivergentHistory(left_first, right_first)
+  guard left_first.value == right_first.value else {
+    raise DivergentHistory(left_first.to_json(), right_first.to_json())
   }
   { histories, snapshot: left_first, }
+}
+
+///|
+pub fn Engine::merge_histories(
+  self : Engine,
+  base : Json?,
+  left : Array[Operation],
+  right : Array[Operation],
+  text_encoding~ : TextEncoding? = None,
+) -> HistoryMerge raise HistoryError {
+  let snapshot = Snapshot::new(base) catch {
+    error => raise InvalidHistorySnapshot(error)
+  }
+  self.merge_snapshot_histories(snapshot, left, right, text_encoding~)
+}
+
+///|
+pub fn HistoryMerge::snapshot_handle(self : HistoryMerge) -> Snapshot {
+  self.snapshot
 }

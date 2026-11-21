@@ -4,6 +4,7 @@ pub struct Draft {
   priv engine : Engine
   priv mut snapshot : Json?
   priv components : Array[Component]
+  priv mut busy : Bool
 }
 
 ///|
@@ -22,7 +23,12 @@ pub extend TextEncoding with @debug.Debug::{to_repr}
 
 ///|
 pub fn Engine::draft(self : Engine, snapshot : Json?) -> Draft raise OpError {
-  { engine: self, snapshot: snapshot.map(copy_checked_json), components: [], }
+  {
+    engine: self,
+    snapshot: snapshot.map(copy_checked_json),
+    components: [],
+    busy: false,
+  }
 }
 
 ///|
@@ -47,7 +53,16 @@ fn child_path(
 
 ///|
 fn Draft::record(self : Draft, component : Component) -> Unit raise OpError {
-  let updated = self.engine.apply_component(self.snapshot, component)
+  guard !self.busy else { raise DraftBusy }
+  self.busy = true
+  defer {
+    self.busy = false
+  }
+  let updated = self.engine.apply_component(
+    self.snapshot,
+    component,
+    persistent=true,
+  )
   self.snapshot = updated
   self.components.push(component)
 }
@@ -58,8 +73,16 @@ pub fn Draft::append(
   self : Draft,
   operation : Operation,
 ) -> Unit raise VerificationError {
-  let updated = self.engine.apply_verified(self.snapshot, operation)
-  self.snapshot = updated
+  guard !self.busy else { raise InvalidSnapshot(DraftBusy) }
+  self.busy = true
+  defer {
+    self.busy = false
+  }
+  let updated = self.engine.apply_snapshot_verified(
+    { value: self.snapshot, },
+    operation,
+  )
+  self.snapshot = updated.value
   for component in operation.components {
     self.components.push(component)
   }

@@ -37,8 +37,10 @@ pub fn Engine::diff(
     options,
     budget: { cells: options.alignment_cells, },
   }
-  let target = after.map(copy_checked_json)
-  match (draft.snapshot(), target) {
+  if after is Some(target) {
+    validate_json_value(target, [])
+  }
+  match (draft.snapshot_handle().value, after) {
     (Some(previous), Some(next)) => state.reconcile([], previous, next)
     (None, Some(next)) => draft.set([], next)
     (Some(_), None) => draft.remove([])

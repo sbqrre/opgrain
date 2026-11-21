@@ -49,6 +49,8 @@ pub let uri : String
 #derive(@debug.Debug)
 pub(all) suberror HistoryError {
   InvalidHistorySnapshot(OpError)
+  HistoryBusy
+  RevisionOverflow
   HistoryEncodingFailed(Side, Int32, OpError)
   HistoryTransformFailed(Int32, Int32, OpError)
   HistoryApplyFailed(HistoryPhase, Side, Int32, VerificationError)
@@ -70,6 +72,7 @@ pub(all) suberror OpError {
   TextMismatch(Int32)
   NonFiniteNumber
   MissingRoot
+  DraftBusy
 }
 pub fn OpError::to_repr(Self) -> @debug.Repr
 
@@ -110,6 +113,7 @@ pub struct Draft {
 }
 pub fn Draft::add_number(Self, Array[PathSegment], Double) -> Unit raise OpError
 pub fn Draft::append(Self, Operation) -> Unit raise VerificationError
+pub fn Draft::edit_subtype(Self, Array[PathSegment], String, @json.Json) -> Unit raise OpError
 pub fn Draft::insert_item(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
 pub fn Draft::move_item(Self, Array[PathSegment], Int32) -> Unit raise OpError
 pub fn Draft::operation(Self) -> Operation
@@ -119,7 +123,10 @@ pub fn Draft::remove_item(Self, Array[PathSegment]) -> Unit raise OpError
 pub fn Draft::replace_item(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
 pub fn Draft::set(Self, Array[PathSegment], @json.Json) -> Unit raise OpError
 pub fn Draft::snapshot(Self) -> @json.Json?
+pub fn Draft::snapshot_handle(Self) -> Snapshot
+pub fn Draft::splice_items(Self, Array[PathSegment], Int32, Int32, Array[@json.Json]) -> Unit raise OpError
 pub fn Draft::splice_text(Self, Array[PathSegment], Int32, Int32, String, encoding? : TextEncoding) -> Unit raise OpError
+pub fn Draft::transaction(Self, (Self) -> Unit raise OpError) -> Operation raise OpError
 
 pub struct Engine {
   // private fields
@@ -137,11 +144,15 @@ pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
 pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
 pub fn Engine::diff(Self, @json.Json?, @json.Json?, options? : DiffOptions) -> Operation raise OpError
 pub fn Engine::draft(Self, @json.Json?) -> Draft raise OpError
+pub fn Engine::draft_snapshot(Self, Snapshot) -> Draft
+pub fn Engine::fork(Self) -> Self
 pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
 pub fn Engine::invert(Self, Operation) -> Operation raise OpError
 pub fn Engine::invert_component(Self, Component) -> Component raise OpError
 pub fn Engine::journal(Self, @json.Json?) -> Journal raise HistoryError
+pub fn Engine::journal_snapshot(Self, Snapshot) -> Journal
 pub fn Engine::merge_histories(Self, @json.Json?, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
+pub fn Engine::merge_snapshot_histories(Self, Snapshot, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
 pub fn Engine::new() -> Self
 pub fn Engine::normalize(Self, @json.Json) -> Operation raise OpError
 pub fn Engine::reencode_text(Self, Operation, TextEncoding) -> Operation raise OpError
@@ -156,6 +167,7 @@ pub struct HistoryMerge {
 }
 pub fn HistoryMerge::histories(Self) -> TransformedHistories
 pub fn HistoryMerge::snapshot(Self) -> @json.Json?
+pub fn HistoryMerge::snapshot_handle(Self) -> Snapshot
 
 #derive(@debug.Debug)
 pub(all) enum HistoryPhase {
@@ -178,12 +190,15 @@ pub struct Journal {
 }
 pub fn Journal::append(Self, Operation) -> Int32 raise HistoryError
 pub fn Journal::append_all(Self, Array[Operation]) -> Int32 raise HistoryError
+pub fn Journal::compact(Self, Int32) -> Unit raise HistoryError
 pub fn Journal::head(Self) -> Int32
 pub fn Journal::integrate(Self, Int32, Array[Operation], text_encoding? : TextEncoding?) -> Int32 raise HistoryError
+pub fn Journal::oldest_revision(Self) -> Int32
 pub fn Journal::operations(Self, Int32, Int32) -> Array[Operation] raise HistoryError
 pub fn Journal::revert(Self, Int32, Int32, text_encoding? : TextEncoding?) -> Int32 raise HistoryError
 pub fn Journal::snapshot(Self) -> @json.Json?
 pub fn Journal::snapshot_at(Self, Int32) -> @json.Json? raise HistoryError
+pub fn Journal::snapshot_handle_at(Self, Int32) -> Snapshot raise HistoryError
 pub fn Journal::undo_operation(Self, Int32, Int32) -> Operation raise HistoryError
 
 #derive(Eq, @debug.Debug)

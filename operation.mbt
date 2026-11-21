@@ -35,6 +35,7 @@ pub(all) suberror OpError {
   TextMismatch(Int32)
   NonFiniteNumber
   MissingRoot
+  DraftBusy
 }
 
 ///|
