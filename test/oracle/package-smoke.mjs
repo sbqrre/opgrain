@@ -1,59 +1,76 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const fixture = mkdtempSync(join(tmpdir(), "opgrain-package-"));
+const registry = process.argv.includes("--registry");
+const version = readFileSync(join(root, "moon.mod"), "utf8").match(/version\s*=\s*"([^"]+)"/)?.[1];
+assert.ok(version, "expected a module version");
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, { cwd, encoding: "utf8" });
   if (result.error) throw result.error;
-  if (result.status !== 0) {
-    throw new Error(`${command} exited with status ${result.status}\n${result.stdout}\n${result.stderr}`);
-  }
+  if (result.status !== 0) throw new Error(`${command} exited with status ${result.status}\n${result.stdout}\n${result.stderr}`);
   return result.stdout;
 }
 
-const target = join(fixture, "build");
-run("moon", ["package", "--frozen", "--target-dir", target], root);
-const artifacts = join(target, "publish");
-const archives = readdirSync(artifacts).filter((file) => /\.zip$/.test(file));
-assert.equal(archives.length, 1, "expected exactly one published module archive");
-const archive = resolve(artifacts, archives[0]);
+if (!registry) {
+  const target = join(fixture, "build");
+  run("moon", ["package", "--frozen", "--target-dir", target], root);
+  const artifacts = join(target, "publish");
+  const archives = readdirSync(artifacts).filter(file => /\.zip$/.test(file));
+  assert.deepEqual(archives, [`sbqrre-opgrain-${version}.zip`]);
+  const archive = resolve(artifacts, archives[0]);
+  const windows = process.platform === "win32";
+  const entries = run(windows ? "tar" : "unzip", windows ? ["-tf", archive] : ["-Z1", archive], fixture)
+    .trim().split(/\r?\n/).map(entry => entry.replaceAll("\\", "/"));
+  assert.ok(entries.every(entry => !entry.startsWith("/") && !entry.split("/").includes("..")));
+  assert.ok(["moon.mod", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md", "snapshot.mbt", "undo.mbt"].every(name => entries.includes(name)));
+  assert.ok(entries.every(entry => !/^(test\/|benchmarks\/|\.github\/)|_(wb)?test\.mbt$/.test(entry)));
+  const library = join(fixture, "opgrain");
+  mkdirSync(library);
+  if (windows) run("tar", ["-xf", archive, "-C", library], fixture);
+  else run("unzip", ["-q", archive, "-d", library], fixture);
+  writeFileSync(join(fixture, "moon.work"), 'members = ["opgrain", "app"]\n');
+}
 
-const isWindows = process.platform === "win32";
-const entries = run(isWindows ? "tar" : "unzip", isWindows ? ["-tf", archive] : ["-Z1", archive], fixture)
-  .trim().split(/\r?\n/).map((entry) => entry.replaceAll("\\", "/"));
-assert.ok(entries.every((entry) => !entry.startsWith("/") && !entry.split("/").includes("..")));
-assert.ok(entries.includes("moon.mod") && entries.includes("LICENSE") && entries.includes("README.md"));
-assert.ok(entries.every((entry) => !/^(test\/|\.github\/)|_(wb)?test\.mbt$/.test(entry)));
-
-const library = join(fixture, "opgrain");
 const consumer = join(fixture, "app");
-mkdirSync(library);
 mkdirSync(consumer);
-if (isWindows) run("tar", ["-xf", archive, "-C", library], fixture);
-else run("unzip", ["-q", archive, "-d", library], fixture);
-
-const version = archives[0].match(/^sbqrre-opgrain-(.+)\.zip$/)?.[1];
-assert.ok(version, "expected the archive for sbqrre/opgrain");
-writeFileSync(join(fixture, "moon.work"), 'members = ["opgrain", "app"]\n');
-writeFileSync(join(consumer, "moon.mod"), `name = "local/package-smoke"\nversion = "0.1.0"\nimport { "sbqrre/opgrain@${version}" }\n`);
+writeFileSync(join(consumer, "moon.mod"), `name = "sbqrre/opgrain-consumer-check"\nversion = "0.1.0"\nimport { "sbqrre/opgrain@${version}" }\n`);
 writeFileSync(join(consumer, "moon.pkg"), 'import { "sbqrre/opgrain" }\npkgtype(kind: "executable")\n');
 writeFileSync(join(consumer, "main.mbt"), String.raw`
 fn main {
-  let base = @opgrain.parse_json("{\"tasks\":[\"Review\"]}") catch { _ => abort("snapshot") }
-  let left = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Test\"}]") catch { _ => abort("left") }
-  let right = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Publish\"}]") catch { _ => abort("right") }
-  let (_, after_left) = @opgrain.transform_x(left, right) catch { _ => abort("transform") }
-  let merged = @opgrain.apply(@opgrain.apply(base, left), after_left) catch { _ => abort("apply") }
-  println(@opgrain.stringify_json(merged) catch { _ => abort("stringify") })
+  try {
+    let engine = @opgrain.Engine::new()
+    let base = @opgrain.parse_json("{\"tasks\":[\"Review\"]}")
+    let left = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Test\"}]")
+    let right = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Publish\"}]")
+    let (_, after_left) = engine.transform_x(left, right)
+    let merged = engine.apply(engine.apply(base, left), after_left)
+    let handle = @opgrain.Snapshot::new(Some(merged))
+    let draft = engine.draft_snapshot(handle)
+    ignore(draft.transaction(candidate => {
+      candidate.splice_items([Key("tasks")], 1, 1, [Json::string("Ready")])
+    }))
+    let journal = engine.journal_snapshot(handle)
+    ignore(journal.append(draft.operation()))
+    journal.compact(1)
+    guard journal.oldest_revision() == 1 && handle.to_json() == Some(merged) else { abort("checkpoint") }
+    let tiny = @opgrain.Snapshot::new(Some(Json::number(1.0e-20)))
+    let addition = @opgrain.Operation::parse("[{\"p\":[],\"na\":1}]")
+    let edit = engine.prepare_edit(tiny, addition)
+    guard engine.apply_snapshot_verified(edit.snapshot(), edit.inverse()).to_json() == tiny.to_json() else { abort("numeric undo") }
+    println(@opgrain.stringify_json(journal.snapshot().unwrap()))
+  } catch { _ => abort("consumer validation failed") }
 }
 `);
-
-const result = run("moon", ["run", ".", "--target", "js", "--frozen", "--quiet"], consumer);
-assert.deepEqual(JSON.parse(result), { tasks: ["Test", "Publish", "Review"] });
-console.log(`Validated ${archives[0]} from an independent MoonBit module`);
+if (registry) run("moon", ["check", "--target", "js"], consumer);
+for (const target of ["js", "native", "wasm", "wasm-gc"]) {
+  const result = run("moon", ["run", ".", "--target", target, "--frozen", "--quiet"], consumer);
+  assert.deepEqual(JSON.parse(result), { tasks: ["Test", "Ready", "Review"] });
+}
+console.log(`Validated sbqrre/opgrain@${version} from ${registry ? "the public registry" : "its packaged archive"} in four targets`);

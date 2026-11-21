@@ -28,6 +28,8 @@
 
 文档感知的校验、草稿、快照差量、历史合并及位置映射见 [快照编辑、合并与位置跟踪](editing.md)。
 
+持久快照、事务、历史压缩与基于实际结果的撤销见 [快照与版本管理](snapshots.md)。
+
 ## 从源代码依赖
 
 将本库克隆到 `opgrain/`，并将调用方放在同级目录 `app/`。在共同的上级目录添加 `moon.work`。
@@ -40,7 +42,7 @@ members = ["opgrain", "app"]
 
 ```moonbit
 import {
-  "sbqrre/opgrain@0.1.0",
+  "sbqrre/opgrain@0.2.0",
 }
 ```
 

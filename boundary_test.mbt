@@ -197,3 +197,28 @@ test "compaction failure cannot advance history or discard retained revisions" {
   assert_eq(journal.oldest_revision(), 1)
   assert_eq(journal.snapshot(), before)
 }
+
+///|
+test "cycle detection keeps ancestors across the recursive-to-iterative boundary" {
+  for depth in [63, 64, 65, 128] {
+    let fields : Map[String, Json] = Map([])
+    let root = Json::object(fields)
+    let mut nested = root
+    for _ in 0..<depth {
+      nested = Json::array([nested])
+    }
+    fields["child"] = nested
+    try @opgrain.Snapshot::new(Some(root)) catch {
+      @opgrain.InvalidJson(_) => ()
+      error => raise error
+    } noraise {
+      _ => fail("cross-boundary cycle accepted")
+    }
+    try @opgrain.stringify_json(root) catch {
+      @opgrain.InvalidJson(_) => ()
+      error => raise error
+    } noraise {
+      _ => fail("cross-boundary cycle serialized")
+    }
+  }
+}

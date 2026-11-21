@@ -6,6 +6,7 @@
     "test": "node test-upstream.mjs",
     "fixtures": "node fixtures.mjs",
     "bridge": "node bridge-smoke.mjs",
+    "extended": "node extended.mjs",
     "live": "node live.mjs",
     "test:reduce": "node --test reduce.test.mjs",
     "package-smoke": "node package-smoke.mjs"

@@ -29,7 +29,7 @@
 
 `engine.merge_histories(base, left, right)` 校验两个原始历史和两个转换后的应用方向，只在结果一致时返回快照与转换后的批次。失败包含阶段、分支、批次和组件下标，或包含舍入等原因造成的两份不一致快照。只需改变文本表示时，`Engine::reencode_text` 为内置文本保留顺序和 UTF-16 坐标。合并时指定 `text_encoding=Some(Text0)` 或 `Some(Legacy)` 可以统一两边的表示。
 
-`engine.journal(base)` 创建内存历史，起点版本号为零。`append_all` 先验证整个批次，再为每条操作保存检查点。`operations(start, end)` 取版本区间 `(start, end]` 的操作。`integrate(base_revision, incoming)` 将从旧版本产生的新分支转换到当前版本，已有历史作为左侧。`undo_operation(start, end)` 会用旧检查点验证逆操作确实恢复起点。`revert(start, end)` 进一步将这条逆操作穿过后续编辑，再追加到历史。成功时原版本仍可读，失败时版本不推进。检查点采用独立快照，内存开销随版本数与文档大小增加。
+`engine.journal(base)` 创建内存历史，起点版本号为零。`append_all` 先验证整个批次，再为每条操作保存检查点。`operations(start, end)` 取版本区间 `(start, end]` 的操作。`integrate(base_revision, incoming)` 将从旧版本产生的新分支转换到当前版本，已有历史作为左侧。`undo_operation(start, end)` 会用旧检查点验证逆操作确实恢复起点。`revert(start, end)` 进一步将这条逆操作穿过后续编辑，再追加到历史。成功时原版本仍可读，失败时版本不推进。检查点通过不透明快照共享未编辑分支，路径上的容器发生变化时复制。可用 `compact` 保留指定版本及之后的历史，绝对版本号继续递增。句柄生命周期与压缩行为见 [快照与版本管理](snapshots.md)。
 
 自定义子类型应保持引擎注册表稳定，回调应对相同输入给出一致结果。合并与撤销可能重复调用回调，库无法撤销回调造成的外部副作用。
 

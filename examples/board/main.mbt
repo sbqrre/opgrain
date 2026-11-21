@@ -122,6 +122,9 @@ fn main {
   try {
     show_board()
     show_revision()
+    show_transactions()
+    show_compaction()
+    show_exact_undo()
   } catch {
     error => abort(@debug.to_string(error))
   }

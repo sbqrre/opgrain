@@ -26,10 +26,14 @@ jobs:
           curl -fsSL https://cli.moonbitlang.com/install/unix.sh | bash -s latest
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - run: moon version --all
+      - run: moon fmt --check
       - name: Test core and fixtures
         run: moon test --frozen --deny-warn --target "${{ matrix.target }}"
       - name: Run the task board example
         run: moon run examples/board --target "${{ matrix.target }}" --frozen
+
+      - name: Run persistent snapshot benchmarks
+        run: moon run benchmarks/persistent --target "${{ matrix.target }}" --release --frozen
 
   oracle:
     name: Node / interoperability and packaging
@@ -54,4 +58,9 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - run: npm run bridge
       - run: npm run live
+      - name: Differential identified-board histories
+        run: |
+          for seed in 1 20261122 4294967295; do
+            EXTENDED_SEED="$seed" npm run extended
+          done
       - run: npm run package-smoke

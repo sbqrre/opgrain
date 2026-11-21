@@ -29,3 +29,15 @@ node test/oracle/reduce.mjs < counterexample.json
 ## 验证打包产物
 
 `npm --prefix test/oracle run package-smoke` 运行 `moon package --frozen`，检查压缩包包含库、README 和许可证，并排除测试驱动与 CI 配置。脚本把压缩包解开到独立工作区，由另一个 MoonBit 模块导入它，并执行同位置插入的并发转换。验证对象是打包后交付给调用方的模块。
+
+## 持久快照与边界回归
+
+0.2.0 的 MoonBit 套件共有 68 项测试，在 native、JS、Wasm 与 Wasm GC 运行。新增测试包含全部 65,536 个 UTF-16 单元的线格式往返、625 组五项列表移动配对、128 组固定种子的双批次历史，以及通过 JSON API 构造的 4,000 层文档。字节串解析遵循核心解析器的 1,024 层默认限制，超限输入校验结构化失败。
+
+`snapshot_wbtest.mbt` 直接检查未编辑分支的引用共享及编辑祖先的容器复制，并检查 Int32 版本溢出。`transaction_test.mbt` 验证事务失败、回调重入、压缩之后的绝对版本和外部句柄。`undo_test.mbt` 验证小数舍入后的精确撤销、标准增量逆操作和无效子类型逆操作。
+
+`npm --prefix test/oracle run extended` 每个种子生成 256 组带唯一任务标识的分支。每组从快照生成四条顺序差量，交给固定 JavaScript 上游应用、求逆和交叉转换，再核对 MoonBit 的普通快照应用、旧值校验和两批次历史合并。CI 使用种子 1、20261122、4294967295，共 768 组。设定环境变量 `EXTENDED_SEED` 可重现单个种子。标题直接从 UTF-16 单元生成，包含单独代理项。
+
+## 从注册表验证依赖
+
+发布后执行 `node test/oracle/package-smoke.mjs --registry`。脚本创建一个独立临时模块，从公共注册表解析当前 manifest 的准确版本，不建立源码工作区引用，并在四个目标运行并发转换、事务、历史压缩和数字精确撤销。普通 `package-smoke` 同样覆盖四个目标，验证本地压缩包的文件边界，并排除基准和测试程序。

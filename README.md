@@ -44,9 +44,17 @@ let next = @opgrain.apply(board, op)
 println(@opgrain.stringify_json(next))
 ```
 
-库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.1.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+安装指定版本后，在调用方的 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+
+```sh
+moon add sbqrre/opgrain@0.2.0
+```
+
+库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.2.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
 
 处理离线看板时，可以用 `Engine::draft` 记录真实旧值，或用 `Engine::diff` 从两份快照生成 JSON0 操作。示例的第六个案例将卡片移动与离线标题编辑合并，跟随标题光标，再用 `Journal::revert` 撤销移动并保留标题编辑。详见 [快照编辑、合并与位置跟踪](docs/editing.md)。
+
+需要保留多个看板版本时，`Snapshot` 句柄共享未编辑分支，`Draft::transaction` 原子提交一组修改，`Journal::compact` 按绝对版本号压缩旧历史。`prepare_edit` 可以用实际旧值构造并验证撤销。示例还演示批量发布任务、压缩后的离线编辑合并，以及浮点舍入后的工分撤销，共 9 个案例。见 [快照、事务与历史压缩](docs/snapshots.md)。
 
 ### 互通与边界
 
@@ -61,6 +69,7 @@ npm --prefix test/oracle ci --ignore-scripts
 npm --prefix test/oracle test
 npm --prefix test/oracle run fixtures -- --check
 npm --prefix test/oracle run live
+npm --prefix test/oracle run extended
 npm --prefix test/oracle run package-smoke
 moon test --frozen --deny-warn --target native
 moon test --frozen --deny-warn --target js
@@ -69,3 +78,5 @@ moon test --frozen --deny-warn --target wasm-gc
 ```
 
 MoonBit 套件读取 Node 生成的固定语料。比较操作数组时忽略 JSON 对象键的排列顺序，并单独检查应用后的语义。Node.js 只用于生成和复核测试数据。测试范围和复现细节见 [测试方法](docs/verification.md)。
+
+基准覆盖 100、1,000 和 10,000 张卡片，使用 release 构建并记录 9 批计时。运行 `node benchmarks/run.mjs` 可测量当前版本，`node benchmarks/compare.mjs js` 可与固定历史版本比较。本机实测表与成本说明见 [看板工作负载基准](docs/benchmarks.md)。
