@@ -8,33 +8,46 @@ fn same_container(a : Json, b : Json) -> Bool {
 }
 
 ///|
+priv enum JsonVisit {
+  Enter(Json)
+  Leave
+}
+
+///|
 fn validate_json_value(
   value : Json,
   ancestors : Array[Json],
 ) -> Unit raise OpError {
-  match value {
-    Array(items) => {
-      guard !ancestors.any(parent => same_container(parent, value)) else {
-        raise InvalidJson("cyclic JSON array")
-      }
-      ancestors.push(value)
-      for child in items {
-        validate_json_value(child, ancestors)
-      }
-      ignore(ancestors.pop())
+  let visits = [Enter(value)]
+  while visits.pop() is Some(visit) {
+    match visit {
+      Leave => ignore(ancestors.pop())
+      Enter(value) =>
+        match value {
+          Array(items) => {
+            guard !ancestors.any(parent => same_container(parent, value)) else {
+              raise InvalidJson("cyclic JSON array")
+            }
+            ancestors.push(value)
+            visits.push(Leave)
+            for i = items.length() - 1; i >= 0; i = i - 1 {
+              visits.push(Enter(items[i]))
+            }
+          }
+          Object(fields) => {
+            guard !ancestors.any(parent => same_container(parent, value)) else {
+              raise InvalidJson("cyclic JSON object")
+            }
+            ancestors.push(value)
+            visits.push(Leave)
+            for _, child in fields {
+              visits.push(Enter(child))
+            }
+          }
+          Number(number, ..) => ignore(checked_number(number))
+          _ => ()
+        }
     }
-    Object(fields) => {
-      guard !ancestors.any(parent => same_container(parent, value)) else {
-        raise InvalidJson("cyclic JSON object")
-      }
-      ancestors.push(value)
-      for _, child in fields {
-        validate_json_value(child, ancestors)
-      }
-      ignore(ancestors.pop())
-    }
-    Number(number, ..) => ignore(checked_number(number))
-    _ => ()
   }
 }
 

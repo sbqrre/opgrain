@@ -127,6 +127,9 @@ pub struct Engine {
 pub fn Engine::append(Self, Operation, Component) -> Operation raise OpError
 pub fn Engine::apply(Self, @json.Json, Operation) -> @json.Json raise OpError
 pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise OpError
+pub fn Engine::apply_snapshot(Self, Snapshot, Operation) -> Snapshot raise OpError
+pub fn Engine::apply_snapshot_batches(Self, Snapshot, Array[Operation]) -> Snapshot raise HistoryError
+pub fn Engine::apply_snapshot_verified(Self, Snapshot, Operation) -> Snapshot raise VerificationError
 pub fn Engine::apply_tracked(Self, @json.Json?, Operation, Array[Location]) -> TrackedApply raise TrackingError
 pub fn Engine::apply_tracked_batches(Self, @json.Json?, Array[Operation], Array[Location]) -> TrackedApply raise TrackingError
 pub fn Engine::apply_verified(Self, @json.Json?, Operation) -> @json.Json? raise VerificationError
@@ -242,6 +245,14 @@ pub(all) enum Side {
 pub fn Side::equal(Self, Self) -> Bool
 pub fn Side::not_equal(Self, Self) -> Bool
 pub fn Side::to_repr(Self) -> @debug.Repr
+
+pub struct Snapshot {
+  // private fields
+}
+pub fn Snapshot::new(@json.Json?) -> Self raise OpError
+pub fn Snapshot::read(Self, Array[PathSegment]) -> @json.Json raise OpError
+pub fn Snapshot::subtree(Self, Array[PathSegment]) -> Self raise OpError
+pub fn Snapshot::to_json(Self) -> @json.Json?
 
 pub(all) struct Subtype {
   apply : (@json.Json, @json.Json) -> @json.Json raise OpError

@@ -101,6 +101,7 @@ fn Engine::verify_component(
   snapshot : Json?,
   component : Component,
   index : Int32,
+  persistent~ : Bool = false,
 ) -> Json? raise VerificationError {
   let path = component.path
   let pair = preimage_pair(snapshot, component) catch {
@@ -114,7 +115,7 @@ fn Engine::verify_component(
       actual.map(copy_json),
     )
   }
-  self.apply_component(snapshot, component) catch {
+  self.apply_component(snapshot, component, persistent~) catch {
     error => raise ComponentFailed(index, path.copy(), error)
   }
 }

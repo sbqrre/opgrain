@@ -32,28 +32,48 @@ fn update_at(
   value : Json,
   path : Array[PathSegment],
   length : Int32,
-  offset : Int32,
+  persistent : Bool,
   update : (Json) -> Json raise OpError,
 ) -> Json raise OpError {
-  if offset == length {
-    return update(value)
-  }
-  match (value, path[offset]) {
-    (Array(items), Index(index)) => {
-      guard index < items.length() else {
-        raise InvalidPath(path.copy(), "list index out of bounds")
+  let parents = []
+  let mut current = value
+  for offset in 0..<length {
+    let child = match (current, path[offset]) {
+      (Array(items), Index(index)) => {
+        guard index >= 0 && index < items.length() else {
+          raise InvalidPath(path.copy(), "list index out of bounds")
+        }
+        items[index]
       }
-      items[index] = update_at(items[index], path, length, offset + 1, update)
-    }
-    (Object(fields), Key(key)) => {
-      guard fields.get(key) is Some(child) else {
-        raise InvalidPath(path.copy(), "object key does not exist")
+      (Object(fields), Key(key)) => {
+        guard fields.get(key) is Some(child) else {
+          raise InvalidPath(path.copy(), "object key does not exist")
+        }
+        child
       }
-      fields[key] = update_at(child, path, length, offset + 1, update)
+      _ =>
+        raise InvalidPath(path.copy(), "path segment does not match container")
     }
-    _ => raise InvalidPath(path.copy(), "path segment does not match container")
+    parents.push(if persistent { shallow_copy(current) } else { current })
+    current = child
   }
-  value
+  let mut result = update(
+    if persistent {
+      shallow_copy(current)
+    } else {
+      current
+    },
+  )
+  for offset = length - 1; offset >= 0; offset = offset - 1 {
+    let parent = parents[offset]
+    match (parent, path[offset]) {
+      (Array(items), Index(index)) => items[index] = result
+      (Object(fields), Key(key)) => fields[key] = result
+      _ => abort("validated parent changed during update")
+    }
+    result = parent
+  }
+  result
 }
 
 ///|
@@ -61,6 +81,7 @@ fn Engine::apply_component(
   self : Engine,
   snapshot : Json?,
   component : Component,
+  persistent~ : Bool = false,
 ) -> Json? raise OpError {
   let { path, action, } = component
   if path.is_empty() && action is ObjectEdit(insert, _) {
@@ -70,14 +91,14 @@ fn Engine::apply_component(
   let length = path.length()
   let output = match action {
     Add(amount) =>
-      update_at(snapshot, path, length, 0, value => {
+      update_at(snapshot, path, length, persistent, value => {
         guard value is Number(n, ..) else {
           raise InvalidPath(path.copy(), "number addition requires a number")
         }
         Json::number(checked_number(n + amount))
       })
     ListEdit(insert, delete) =>
-      update_at(snapshot, path, length - 1, 0, parent => {
+      update_at(snapshot, path, length - 1, persistent, parent => {
         let items = require_list(parent, path)
         guard path[length - 1] is Index(index) else {
           raise InvalidPath(path.copy(), "list edit requires a list")
@@ -95,7 +116,7 @@ fn Engine::apply_component(
         parent
       })
     Move(destination) =>
-      update_at(snapshot, path, length - 1, 0, parent => {
+      update_at(snapshot, path, length - 1, persistent, parent => {
         let items = require_list(parent, path)
         guard path[length - 1] is Index(source) else {
           raise InvalidPath(path.copy(), "list move requires a list")
@@ -110,7 +131,7 @@ fn Engine::apply_component(
         parent
       })
     ObjectEdit(insert, _) =>
-      update_at(snapshot, path, length - 1, 0, parent => {
+      update_at(snapshot, path, length - 1, persistent, parent => {
         let fields = require_object(parent, path)
         guard path[length - 1] is Key(key) else {
           raise InvalidPath(path.copy(), "object edit requires an object")
@@ -127,7 +148,7 @@ fn Engine::apply_component(
         parent
       })
     LegacyText(insert, text) =>
-      update_at(snapshot, path, length - 1, 0, value => {
+      update_at(snapshot, path, length - 1, persistent, value => {
         guard path[length - 1] is Index(position) else {
           raise InvalidPath(path.copy(), "legacy text edit requires a string")
         }
@@ -149,7 +170,7 @@ fn Engine::apply_component(
         }
       })
     SubtypeEdit(kind, payload) =>
-      update_at(snapshot, path, length, 0, value => {
+      update_at(snapshot, path, length, persistent, value => {
         match self.subtypes.get(kind) {
           Some(subtype) =>
             copy_checked_json(

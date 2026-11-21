@@ -69,18 +69,42 @@ pub let name : String = "json0"
 pub let uri : String = "http://sharejs.org/types/JSONv0"
 
 ///|
-fn copy_json(value : Json) -> Json {
+fn shallow_copy(value : Json) -> Json {
   match value {
-    Object(fields) => {
-      let result = Map([])
-      for key, item in fields {
-        result[key] = copy_json(item)
-      }
-      Json::object(result)
-    }
-    Array(items) => Json::array(items.map(copy_json))
+    Object(fields) => Json::object(fields.copy())
+    Array(items) => Json::array(items.copy())
     _ => value
   }
+}
+
+///|
+fn copy_json(value : Json) -> Json {
+  let root = shallow_copy(value)
+  let pending = [(value, root)]
+  while pending.pop() is Some((source, target)) {
+    match (source, target) {
+      (Object(fields), Object(output)) =>
+        for key, child in fields {
+          let cloned = shallow_copy(child)
+          output[key] = cloned
+          match child {
+            Object(_) | Array(_) => pending.push((child, cloned))
+            _ => ()
+          }
+        }
+      (Array(items), Array(output)) =>
+        for index, child in items {
+          let cloned = shallow_copy(child)
+          output[index] = cloned
+          match child {
+            Object(_) | Array(_) => pending.push((child, cloned))
+            _ => ()
+          }
+        }
+      _ => ()
+    }
+  }
+  root
 }
 
 ///|
