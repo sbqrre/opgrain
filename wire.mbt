@@ -103,24 +103,47 @@ fn unpack_units(encoded : String) -> String raise OpError {
 }
 
 ///|
-fn restore_wire_strings(value : Json) -> Json raise OpError {
+fn restore_wire_atom(value : Json) -> Json raise OpError {
   match value {
-    String(s) => Json::string(unpack_units(s))
-    Array(values) =>
-      Json::array(values.map(value => restore_wire_strings(value)))
-    Object(fields) => {
-      let result = Map([])
-      for key, value in fields {
-        result[unpack_units(key)] = restore_wire_strings(value)
-      }
-      Json::object(result)
-    }
+    String(text) => Json::string(unpack_units(text))
+    Array(_) => Json::array([])
+    Object(_) => Json::object(Map([]))
     Number(n, ..) => {
-      guard !n.is_inf() && !n.is_nan() else { raise NonFiniteNumber }
+      ignore(checked_number(n))
       value
     }
     _ => value
   }
+}
+
+///|
+fn restore_wire_strings(value : Json) -> Json raise OpError {
+  let root = restore_wire_atom(value)
+  let pending = [(value, root)]
+  while pending.pop() is Some((source, target)) {
+    match (source, target) {
+      (Array(items), Array(output)) =>
+        for child in items {
+          let restored = restore_wire_atom(child)
+          output.push(restored)
+          match child {
+            Array(_) | Object(_) => pending.push((child, restored))
+            _ => ()
+          }
+        }
+      (Object(fields), Object(output)) =>
+        for key, child in fields {
+          let restored = restore_wire_atom(child)
+          output[unpack_units(key)] = restored
+          match child {
+            Array(_) | Object(_) => pending.push((child, restored))
+            _ => ()
+          }
+        }
+      _ => ()
+    }
+  }
+  root
 }
 
 ///|
@@ -172,38 +195,56 @@ fn write_wire_string(out : StringBuilder, value : String) -> Unit {
 }
 
 ///|
+priv enum WireTask {
+  Value(Json)
+  Punctuation(Char)
+  Key(String)
+}
+
+///|
 fn write_wire(out : StringBuilder, value : Json) -> Unit raise OpError {
-  match value {
-    String(s) => write_wire_string(out, s)
-    Array(values) => {
-      out.write_char('[')
-      for i, item in values {
-        if i != 0 {
-          out.write_char(',')
+  let tasks = [WireTask::Value(value)]
+  while tasks.pop() is Some(task) {
+    match task {
+      Punctuation(character) => out.write_char(character)
+      Key(key) => write_wire_string(out, key)
+      Value(value) =>
+        match value {
+          String(text) => write_wire_string(out, text)
+          Array(items) => {
+            out.write_char('[')
+            tasks.push(Punctuation(']'))
+            for i = items.length() - 1; i >= 0; i = i - 1 {
+              tasks.push(Value(items[i]))
+              if i != 0 {
+                tasks.push(Punctuation(','))
+              }
+            }
+          }
+          Object(fields) => {
+            out.write_char('{')
+            tasks.push(Punctuation('}'))
+            let members = []
+            for key, child in fields {
+              members.push((key, child))
+            }
+            for i = members.length() - 1; i >= 0; i = i - 1 {
+              let (key, child) = members[i]
+              tasks.push(Value(child))
+              tasks.push(Punctuation(':'))
+              tasks.push(Key(key))
+              if i != 0 {
+                tasks.push(Punctuation(','))
+              }
+            }
+          }
+          Number(n, ..) => {
+            ignore(checked_number(n))
+            out.write_string(Json::number(n).stringify())
+          }
+          _ => out.write_string(value.stringify())
         }
-        write_wire(out, item)
-      }
-      out.write_char(']')
     }
-    Object(fields) => {
-      out.write_char('{')
-      let mut first = true
-      for key, item in fields {
-        if !first {
-          out.write_char(',')
-        }
-        first = false
-        write_wire_string(out, key)
-        out.write_char(':')
-        write_wire(out, item)
-      }
-      out.write_char('}')
-    }
-    Number(n, ..) => {
-      guard !n.is_nan() && !n.is_inf() else { raise NonFiniteNumber }
-      out.write_string(Json::number(n).stringify())
-    }
-    _ => out.write_string(value.stringify())
   }
 }
 

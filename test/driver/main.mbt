@@ -31,10 +31,7 @@ fn operation(
 }
 
 ///|
-fn evaluate(
-  engine : @opgrain.Engine,
-  request : Json,
-) -> Json? raise @opgrain.OpError {
+fn evaluate(engine : @opgrain.Engine, request : Json) -> Json? raise {
   guard request is Object(fields) &&
     fields.get("command") is Some(String(command)) else {
     raise @opgrain.InvalidJson("expected a request with a command")
@@ -42,6 +39,54 @@ fn evaluate(
   match command {
     "apply" =>
       engine.apply_optional(fields.get("snapshot"), operation(fields, "op"))
+    "applySnapshot" =>
+      engine
+      .apply_snapshot(
+        @opgrain.Snapshot::new(fields.get("snapshot")),
+        operation(fields, "op"),
+      )
+      .to_json()
+    "applySnapshotVerified" =>
+      engine
+      .apply_snapshot_verified(
+        @opgrain.Snapshot::new(fields.get("snapshot")),
+        operation(fields, "op"),
+      )
+      .to_json()
+    "mergeHistories" => {
+      fn operations(
+        key : String,
+      ) -> Array[@opgrain.Operation] raise @opgrain.OpError {
+        guard required(fields, key) is Array(items) else {
+          raise @opgrain.InvalidJson("expected operation batches")
+        }
+        items.map(item => @opgrain.Operation::from_json(item))
+      }
+      let merged = engine.merge_histories(
+        fields.get("snapshot"),
+        operations("left"),
+        operations("right"),
+      )
+      Some(
+        Json::object(
+          Map([
+            ("snapshot", merged.snapshot().unwrap()),
+            (
+              "left",
+              Json::array(
+                merged.histories().left_after_right().map(op => op.to_json()),
+              ),
+            ),
+            (
+              "right",
+              Json::array(
+                merged.histories().right_after_left().map(op => op.to_json()),
+              ),
+            ),
+          ]),
+        ),
+      )
+    }
     "diff" => {
       let list_identity_key = match fields.get("listIdentityKey") {
         Some(String(key)) => Some(key)
