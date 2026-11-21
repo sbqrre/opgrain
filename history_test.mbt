@@ -92,7 +92,7 @@ test "history exposes branch, batch, and component for stale input" {
       Original,
       Right,
       1,
-      @opgrain.StalePreimage(0, [Index(0)], _, _)
+      @opgrain.StalePreimage(0, [Index(0)], _, _),
     ) => ()
     error => raise error
   } noraise {
@@ -104,7 +104,7 @@ test "history exposes branch, batch, and component for stale input" {
       Original,
       Left,
       1,
-      @opgrain.StalePreimage(0, [Index(0)], _, _)
+      @opgrain.StalePreimage(0, [Index(0)], _, _),
     ) => ()
     error => raise error
   } noraise {

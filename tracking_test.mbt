@@ -137,7 +137,7 @@ test "tracking identifies invalid starting positions and the failing batch" {
   try engine.apply_tracked_batches(base, [first, stale], []) catch {
     @opgrain.TrackingApplyFailed(
       1,
-      @opgrain.ComponentFailed(0, [Index(2)], @opgrain.TextMismatch(2))
+      @opgrain.ComponentFailed(0, [Index(2)], @opgrain.TextMismatch(2)),
     ) => ()
     error => raise error
   } noraise {

@@ -60,7 +60,7 @@ test "container checks report the same error as apply" {
   catch {
     @opgrain.InvalidPath(
       [@opgrain.Key("items"), @opgrain.Index(0)],
-      "expected a list"
+      "expected a list",
     ) => ()
     _ => fail("wrong apply error")
   } noraise {

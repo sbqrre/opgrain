@@ -40,7 +40,7 @@ test "persistent batches leave earlier snapshots intact after a late failure" {
       Original,
       Left,
       1,
-      @opgrain.StalePreimage(0, _, _, _)
+      @opgrain.StalePreimage(0, _, _, _),
     ) => ()
     error => raise error
   } noraise {

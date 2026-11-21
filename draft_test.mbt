@@ -70,7 +70,7 @@ test "verified apply distinguishes an absent root from null and indexes path err
     @opgrain.ComponentFailed(
       0,
       [Key("absent"), Index(0)],
-      @opgrain.InvalidPath(_, _)
+      @opgrain.InvalidPath(_, _),
     ) => ()
     error => raise error
   } noraise {
