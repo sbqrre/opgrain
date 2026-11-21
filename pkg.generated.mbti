@@ -85,6 +85,15 @@ pub(all) suberror TrackingError {
 pub fn TrackingError::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub(all) suberror UndoError {
+  ForwardRejected(VerificationError)
+  InverseRejected(Int32, OpError)
+  UndoRejected(VerificationError)
+  UndoDidNotRestore(@json.Json?, @json.Json?)
+}
+pub fn UndoError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub(all) suberror VerificationError {
   InvalidSnapshot(OpError)
   ComponentFailed(Int32, Array[PathSegment], OpError)
@@ -155,6 +164,7 @@ pub fn Engine::merge_histories(Self, @json.Json?, Array[Operation], Array[Operat
 pub fn Engine::merge_snapshot_histories(Self, Snapshot, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
 pub fn Engine::new() -> Self
 pub fn Engine::normalize(Self, @json.Json) -> Operation raise OpError
+pub fn Engine::prepare_edit(Self, Snapshot, Operation) -> UndoableEdit raise UndoError
 pub fn Engine::reencode_text(Self, Operation, TextEncoding) -> Operation raise OpError
 pub fn Engine::register_subtype(Self, String, Subtype) -> Unit
 pub fn Engine::transform(Self, Operation, Operation, Side) -> Operation raise OpError
@@ -306,6 +316,13 @@ pub struct TransformedHistories {
 }
 pub fn TransformedHistories::left_after_right(Self) -> Array[Operation]
 pub fn TransformedHistories::right_after_left(Self) -> Array[Operation]
+
+pub struct UndoableEdit {
+  // private fields
+}
+pub fn UndoableEdit::inverse(Self) -> Operation
+pub fn UndoableEdit::operation(Self) -> Operation
+pub fn UndoableEdit::snapshot(Self) -> Snapshot
 
 // Type aliases
 

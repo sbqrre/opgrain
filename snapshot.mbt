@@ -24,7 +24,7 @@ pub fn Snapshot::read(
 }
 
 ///|
-/// Read the root without copying its containers. The result is another opaque snapshot.
+/// Select a subtree without copying its containers. The result is an opaque snapshot.
 pub fn Snapshot::subtree(
   self : Snapshot,
   path : Array[PathSegment],
