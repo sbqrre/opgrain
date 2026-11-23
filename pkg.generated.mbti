@@ -23,6 +23,16 @@ pub fn compose(Operation, Operation) -> Operation raise OpError
 
 pub fn create(data? : @json.Json) -> @json.Json
 
+pub fn decode_json(String, options? : DecodeOptions) -> @json.Json raise DecodeError
+
+pub fn diff_text(String, String, options? : TextDiffOptions) -> TextDiff raise TextDiffError
+
+pub fn diff_text_lines(String, String, options? : LineDiffOptions) -> LineDiff raise TextDiffError
+
+pub fn encode_json(@json.Json, options? : EncodeOptions) -> String raise EncodeError
+
+pub fn encode_json_to(@json.Json, (String) -> Unit, options? : EncodeOptions) -> Int32 raise EncodeError
+
 pub fn invert(Operation) -> Operation raise OpError
 
 pub let name : String
@@ -32,6 +42,8 @@ pub fn normalize(@json.Json) -> Operation raise OpError
 pub fn parse_json(String) -> @json.Json raise OpError
 
 pub fn path_matches(Array[PathSegment], Array[PathSegment], ignore_last? : Bool) -> Bool
+
+pub fn source_position(String, Int32) -> SourcePosition raise OpError
 
 pub fn stringify_json(@json.Json) -> String raise OpError
 
@@ -46,6 +58,90 @@ pub fn transform_x(Operation, Operation) -> (Operation, Operation) raise OpError
 pub let uri : String
 
 // Errors
+#derive(@debug.Debug)
+pub(all) suberror ArchiveError {
+  InvalidArchive(String)
+  ArchiveDecode(DecodeError)
+  ArchiveValue(OpError)
+  ArchiveReplay(Int32, VerificationError)
+  ArchiveLimit(LimitError)
+  ArchiveOperation(Int32, OpError)
+  ArchiveBatch(Int32, LimitError)
+  ArchiveCheckpointMismatch
+}
+pub fn ArchiveError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror BranchError {
+  InvalidBranchLabels
+  BranchBusy
+  BranchApply(Side, Int32, VerificationError)
+  BranchHistory(HistoryError)
+  BranchRange(Side, Int32, Int32)
+  StaleBranchPreview
+  BranchRevisionOverflow
+}
+pub fn BranchError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror ComparisonError {
+  InvalidComparisonLimits
+  ComparisonBudget(String, Int32)
+}
+pub fn ComparisonError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror CompositionError {
+  SequentialCompositionFailed(Int32, VerificationError)
+  CompositionFallbackFailed(VerificationError)
+  CompositionFallbackMismatch
+}
+pub fn CompositionError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror CoordinateError {
+  CoordinateOutOfBounds(String, Int32)
+  SplitCodePoint(Int32)
+  IsolatedSurrogate(Int32)
+}
+pub fn CoordinateError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror CursorError {
+  InvalidCursorStep(Int32)
+  CursorLimits(LimitError)
+  CursorComponent(Int32, VerificationError)
+  CursorOffset(Int32, Int32)
+}
+pub fn CursorError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror DecodeError {
+  JsonSyntax(Int32, String)
+  JsonLimit(Int32, String, Int32)
+  DuplicateMember(Int32, String)
+  InvalidDecodeOptions(String)
+  JsonNumberOverflow(Int32)
+}
+pub fn DecodeError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror EncodeError {
+  InvalidEncodeOptions(String)
+  InvalidEncodedValue(OpError)
+  EncodedOutputLimit(Int32, Int32)
+}
+pub fn EncodeError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror GuardError {
+  InvalidCondition(String)
+  GuardRejected(Bool, Int32)
+  GuardApplyRejected(VerificationError)
+  GuardEvaluation(OpError)
+}
+pub fn GuardError::to_repr(Self) -> @debug.Repr
+
 #derive(@debug.Debug)
 pub(all) suberror HistoryError {
   InvalidHistorySnapshot(OpError)
@@ -63,6 +159,34 @@ pub(all) suberror HistoryError {
 pub fn HistoryError::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub(all) suberror IterativeDiffError {
+  InvalidIterativeDiffOptions
+  IterativeDiffBudget(String, Int32)
+  IterativeTextDiff(TextDiffError)
+  IterativeDiffComponent(OpError)
+  IterativeDiffVerification(VerificationError)
+  IterativeDiffMismatch
+}
+pub fn IterativeDiffError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror LimitError {
+  InvalidLimits(String)
+  OperationLimit(String, Int64, Int64)
+  ComponentPolicy(Int32, String)
+  LimitedApply(Int32, VerificationError)
+}
+pub fn LimitError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror MultiMergeError {
+  InvalidMergeLimits
+  MergeBudget(String, Int64, Int64)
+  BranchMergeFailed(Int32, HistoryError)
+}
+pub fn MultiMergeError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub(all) suberror OpError {
   InvalidJson(String)
   InvalidComponent(Int32, String)
@@ -75,6 +199,68 @@ pub(all) suberror OpError {
   DraftBusy
 }
 pub fn OpError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror PackingError {
+  InvalidPackingLimits
+  ComponentTooLarge(Int32, String, Int64, Int64)
+  PackingEncoding(Int32, OpError)
+  PackingReplay(Int32, VerificationError)
+}
+pub fn PackingError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror PointerError {
+  InvalidPointer(Int32, String)
+  PointerPath(Int32, OpError)
+}
+pub fn PointerError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror ProjectionError {
+  ProjectionQuery(QueryError)
+  ProjectionPath(OpError)
+  ProjectionApply(VerificationError)
+  OverlappingSelection(Path, Path)
+  SelectionCallback(Int32, OpError)
+  SelectionUndo(UndoError)
+}
+pub fn ProjectionError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror QueryError {
+  InvalidQuery(String)
+  QueryBudget(String, Int32)
+}
+pub fn QueryError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror RebaseError {
+  RebaseBusy
+  RebaseRange(Int32, Int32)
+  RebaseOverflow
+  PendingApply(Int32, VerificationError)
+  RebaseMerge(HistoryError)
+  StaleRebasePreview
+}
+pub fn RebaseError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror TextDiffError {
+  InvalidTextDiffOptions
+  TextDiffInputLimit(Int32, Int32)
+}
+pub fn TextDiffError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) suberror TextProjectionError {
+  TextProjectionPath(OpError)
+  TextProjectionApply(Int32, VerificationError)
+  TextAnchorLost(Int32, LossReason)
+  UnsupportedTextProjection(Int32)
+  TextProjectionMismatch
+}
+pub fn TextProjectionError::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
 pub(all) suberror TrackingError {
@@ -94,6 +280,20 @@ pub(all) suberror UndoError {
 pub fn UndoError::to_repr(Self) -> @debug.Repr
 
 #derive(@debug.Debug)
+pub(all) suberror UndoHistoryError {
+  UndoHistoryBusy
+  InvalidUndoCapacity(Int32)
+  NothingToUndo
+  NothingToRedo
+  UndoPreparation(UndoError)
+  UndoRebase(Int32, OpError)
+  UndoReplay(Int32, VerificationError)
+  ExternalEditRejected(VerificationError)
+  UndoComposition(CompositionError)
+}
+pub fn UndoHistoryError::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
 pub(all) suberror VerificationError {
   InvalidSnapshot(OpError)
   ComponentFailed(Int32, Array[PathSegment], OpError)
@@ -102,12 +302,140 @@ pub(all) suberror VerificationError {
 pub fn VerificationError::to_repr(Self) -> @debug.Repr
 
 // Types and methods
+pub struct Access {
+  // private fields
+}
+pub fn Access::component(Self) -> Int32
+pub fn Access::kind(Self) -> AccessKind
+pub fn Access::path(Self) -> Path
+
+#derive(Eq, @debug.Debug)
+pub(all) enum AccessKind {
+  NumericUpdate
+  InsertValue
+  DeleteValue
+  ReplaceValue
+  InsertItem
+  DeleteItem
+  ReplaceItem
+  MoveItemAccess(Int32)
+  InsertString(Int32, Int32)
+  DeleteString(Int32, Int32)
+  SubtypeAccess(String)
+}
+pub fn AccessKind::equal(Self, Self) -> Bool
+pub fn AccessKind::not_equal(Self, Self) -> Bool
+pub fn AccessKind::to_repr(Self) -> @debug.Repr
+
+pub struct ApplyCursor {
+  // private fields
+}
+pub fn ApplyCursor::advance(Self, Int32) -> Self raise CursorError
+pub fn ApplyCursor::applied(Self) -> Operation
+pub fn ApplyCursor::checkpoints(Self, Int32) -> Array[Self] raise CursorError
+pub fn ApplyCursor::done(Self) -> Bool
+pub fn ApplyCursor::finish(Self) -> Snapshot raise CursorError
+pub fn ApplyCursor::initial(Self) -> Snapshot
+pub fn ApplyCursor::offset(Self) -> Int32
+pub fn ApplyCursor::pending(Self) -> Operation
+pub fn ApplyCursor::remaining(Self) -> Int32
+pub fn ApplyCursor::seek(Self, Int32) -> Self raise CursorError
+pub fn ApplyCursor::snapshot(Self) -> Snapshot
+
+pub struct ApplyTrace {
+  // private fields
+}
+pub fn ApplyTrace::checkpoint(Self, Int32) -> Snapshot raise OpError
+pub fn ApplyTrace::initial(Self) -> Snapshot
+pub fn ApplyTrace::operations(Self) -> Operation
+pub fn ApplyTrace::records(Self) -> Array[ChangeRecord]
+pub fn ApplyTrace::result(Self) -> Snapshot
+pub fn ApplyTrace::select(Self, Array[PathPattern]) -> Array[ChangeRecord]
+
+pub struct BranchPair {
+  // private fields
+}
+pub fn BranchPair::accept(Self, BranchPreview) -> Snapshot raise BranchError
+pub fn BranchPair::append(Self, Side, Operation) -> Snapshot raise BranchError
+pub fn BranchPair::append_all(Self, Side, Array[Operation]) -> Snapshot raise BranchError
+pub fn BranchPair::base(Self) -> Snapshot
+pub fn BranchPair::label(Self, Side) -> String
+pub fn BranchPair::length(Self, Side) -> Int32
+pub fn BranchPair::operations(Self, Side) -> Array[Operation]
+pub fn BranchPair::preview(Self, text_encoding? : TextEncoding?) -> BranchPreview raise BranchError
+pub fn BranchPair::rewind(Self, Side, Int32) -> Snapshot raise BranchError
+pub fn BranchPair::snapshot(Self, Side) -> Snapshot
+
+pub struct BranchPreview {
+  // private fields
+}
+pub fn BranchPreview::counts(Self) -> (Int32, Int32)
+pub fn BranchPreview::histories(Self) -> TransformedHistories
+pub fn BranchPreview::result(Self) -> Snapshot
+
+pub struct ChangeRecord {
+  // private fields
+}
+pub fn ChangeRecord::after(Self) -> Snapshot
+pub fn ChangeRecord::batch(Self) -> Int32
+pub fn ChangeRecord::before(Self) -> Snapshot
+pub fn ChangeRecord::destination(Self) -> Path?
+pub fn ChangeRecord::index(Self) -> Int32
+pub fn ChangeRecord::matches(Self, Array[PathPattern]) -> Bool
+pub fn ChangeRecord::next_value(Self) -> @json.Json?
+pub fn ChangeRecord::operation(Self) -> Operation
+pub fn ChangeRecord::previous_value(Self) -> @json.Json?
+pub fn ChangeRecord::source(Self) -> Path?
+
+pub(all) struct ComparisonLimits {
+  max_visits : Int32
+  max_differences : Int32
+  max_depth : Int32
+}
+pub fn ComparisonLimits::default() -> Self
+
 pub struct Component {
   // private fields
 }
 pub fn Component::from_json(@json.Json) -> Self raise OpError
 pub fn Component::get_path(Self) -> Array[PathSegment]
+pub fn Component::instruction(Self) -> Instruction
+pub fn Component::new(Array[PathSegment], Instruction) -> Self raise OpError
 pub fn Component::to_json(Self) -> @json.Json
+
+#derive(Eq, @debug.Debug)
+pub(all) enum CompositionDecision {
+  NormalizedComposition
+  SequentialFallback
+}
+pub fn CompositionDecision::equal(Self, Self) -> Bool
+pub fn CompositionDecision::not_equal(Self, Self) -> Bool
+pub fn CompositionDecision::to_repr(Self) -> @debug.Repr
+
+#derive(@debug.Debug)
+pub(all) enum Condition {
+  RootPresent
+  PathPresent(Path)
+  PathAbsent(Path)
+  EqualValue(Path, @json.Json)
+  NumberRange(Path, Double?, Double?)
+  StringIncludes(Path, String)
+  LengthRange(Path, Int32, Int32)
+  UniqueListKey(Path, String)
+  AllConditions(Array[Condition])
+  AnyCondition(Array[Condition])
+  Negated(Condition)
+}
+pub fn Condition::to_repr(Self) -> @debug.Repr
+
+pub(all) struct DecodeOptions {
+  max_depth : Int32
+  max_values : Int32
+  max_string_units : Int32
+  max_input_units : Int32
+  reject_duplicate_keys : Bool
+}
+pub fn DecodeOptions::default() -> Self
 
 pub(all) struct DiffOptions {
   text_encoding : TextEncoding
@@ -116,6 +444,17 @@ pub(all) struct DiffOptions {
   prefer_number_add : Bool
 }
 pub fn DiffOptions::default() -> Self
+
+#derive(Eq, @debug.Debug)
+pub(all) enum DifferenceKind {
+  ValueChanged
+  ValueAdded
+  ValueRemoved
+  ValueTypeChanged
+}
+pub fn DifferenceKind::equal(Self, Self) -> Bool
+pub fn DifferenceKind::not_equal(Self, Self) -> Bool
+pub fn DifferenceKind::to_repr(Self) -> @debug.Repr
 
 pub struct Draft {
   // private fields
@@ -137,40 +476,76 @@ pub fn Draft::splice_items(Self, Array[PathSegment], Int32, Int32, Array[@json.J
 pub fn Draft::splice_text(Self, Array[PathSegment], Int32, Int32, String, encoding? : TextEncoding) -> Unit raise OpError
 pub fn Draft::transaction(Self, (Self) -> Unit raise OpError) -> Operation raise OpError
 
+pub(all) struct EncodeOptions {
+  escape_non_ascii : Bool
+  sort_keys : Bool
+  indent : Int32
+  chunk_units : Int32
+  max_output_units : Int32
+}
+pub fn EncodeOptions::default() -> Self
+
 pub struct Engine {
   // private fields
 }
+pub fn Engine::advance_tracking(Self, TrackedSnapshot, Array[Operation]) -> TrackedSnapshot raise TrackingError
 pub fn Engine::append(Self, Operation, Component) -> Operation raise OpError
 pub fn Engine::apply(Self, @json.Json, Operation) -> @json.Json raise OpError
+pub fn Engine::apply_cursor(Self, Snapshot, Operation, limits? : OperationLimits) -> ApplyCursor raise CursorError
+pub fn Engine::apply_limited(Self, Snapshot, Operation, limits? : OperationLimits) -> Snapshot raise LimitError
 pub fn Engine::apply_optional(Self, @json.Json?, Operation) -> @json.Json? raise OpError
 pub fn Engine::apply_snapshot(Self, Snapshot, Operation) -> Snapshot raise OpError
 pub fn Engine::apply_snapshot_batches(Self, Snapshot, Array[Operation]) -> Snapshot raise HistoryError
 pub fn Engine::apply_snapshot_verified(Self, Snapshot, Operation) -> Snapshot raise VerificationError
 pub fn Engine::apply_tracked(Self, @json.Json?, Operation, Array[Location]) -> TrackedApply raise TrackingError
 pub fn Engine::apply_tracked_batches(Self, @json.Json?, Array[Operation], Array[Location]) -> TrackedApply raise TrackingError
+pub fn Engine::apply_tracked_snapshot(Self, Snapshot, Operation, Array[Location]) -> TrackedSnapshot raise TrackingError
 pub fn Engine::apply_verified(Self, @json.Json?, Operation) -> @json.Json? raise VerificationError
+pub fn Engine::apply_when(Self, Snapshot, Operation, Array[Condition], after? : Array[Condition]) -> Snapshot raise GuardError
+pub fn Engine::branch_pair(Self, Snapshot, left_label? : String, right_label? : String) -> BranchPair raise BranchError
+pub fn Engine::check_operation_limits(Self, Operation, limits? : OperationLimits) -> OperationMetrics raise LimitError
 pub fn Engine::check_valid_op(Self, @json.Json) -> Unit raise OpError
 pub fn Engine::compose(Self, Operation, Operation) -> Operation raise OpError
+pub fn Engine::compose_all(Self, Array[Operation]) -> Operation raise OpError
+pub fn Engine::compose_verified(Self, Snapshot, Array[Operation]) -> VerifiedComposition raise CompositionError
+pub fn Engine::compose_verified_groups(Self, Snapshot, Array[Array[Operation]]) -> Array[VerifiedComposition] raise CompositionError
+pub fn Engine::decode_archive(Self, String, decode_options? : DecodeOptions, limits? : OperationLimits) -> JournalArchive raise ArchiveError
 pub fn Engine::diff(Self, @json.Json?, @json.Json?, options? : DiffOptions) -> Operation raise OpError
+pub fn Engine::diff_keyed_list(Self, Array[@json.Json], Array[@json.Json], String, path? : Array[PathSegment], options? : DiffOptions) -> ListDiff raise OpError
+pub fn Engine::diff_keyed_subtree(Self, Snapshot, Path, Array[@json.Json], String, options? : DiffOptions) -> ListDiff raise OpError
+pub fn Engine::diff_snapshots(Self, Snapshot, Snapshot, options? : IterativeDiffOptions) -> SnapshotDiff raise IterativeDiffError
 pub fn Engine::draft(Self, @json.Json?) -> Draft raise OpError
 pub fn Engine::draft_snapshot(Self, Snapshot) -> Draft
+pub fn Engine::edit_selection(Self, Selection, (Path, @json.Json) -> @json.Json raise OpError) -> UndoableEdit raise ProjectionError
 pub fn Engine::fork(Self) -> Self
 pub fn Engine::incremental_apply(Self, @json.Json?, Operation, (Operation, @json.Json?) -> Unit) -> @json.Json? raise OpError
 pub fn Engine::invert(Self, Operation) -> Operation raise OpError
+pub fn Engine::invert_all(Self, Array[Operation]) -> Array[Operation] raise OpError
 pub fn Engine::invert_component(Self, Component) -> Component raise OpError
 pub fn Engine::journal(Self, @json.Json?) -> Journal raise HistoryError
 pub fn Engine::journal_snapshot(Self, Snapshot) -> Journal
 pub fn Engine::merge_histories(Self, @json.Json?, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
+pub fn Engine::merge_many(Self, Snapshot, Array[Array[Operation]], text_encoding? : TextEncoding?, limits? : MergeLimits) -> MultiMerge raise MultiMergeError
 pub fn Engine::merge_snapshot_histories(Self, Snapshot, Array[Operation], Array[Operation], text_encoding? : TextEncoding?) -> HistoryMerge raise HistoryError
 pub fn Engine::new() -> Self
 pub fn Engine::normalize(Self, @json.Json) -> Operation raise OpError
 pub fn Engine::prepare_edit(Self, Snapshot, Operation) -> UndoableEdit raise UndoError
+pub fn Engine::preview_merge(Self, Snapshot, Operation, Operation, text_encoding? : TextEncoding?) -> MergePreview raise HistoryError
+pub fn Engine::project_text(Self, Snapshot, Operation, Path) -> TextProjection raise TextProjectionError
+pub fn Engine::project_text_batches(Self, Snapshot, Array[Operation], Path) -> TextProjection raise TextProjectionError
+pub fn Engine::read_archive(Self, @json.Json, limits? : OperationLimits) -> JournalArchive raise ArchiveError
+pub fn Engine::rebase_buffer(Self, Snapshot) -> RebaseBuffer
 pub fn Engine::reencode_text(Self, Operation, TextEncoding) -> Operation raise OpError
 pub fn Engine::register_subtype(Self, String, Subtype) -> Unit
+pub fn Engine::replay_packed(Self, Snapshot, PackedOperations) -> Array[Snapshot] raise PackingError
+pub fn Engine::trace_apply(Self, Snapshot, Operation) -> ApplyTrace raise HistoryError
+pub fn Engine::trace_batches(Self, Snapshot, Array[Operation]) -> ApplyTrace raise HistoryError
 pub fn Engine::transform(Self, Operation, Operation, Side) -> Operation raise OpError
 pub fn Engine::transform_component(Self, Component, Component, Side) -> Operation raise OpError
 pub fn Engine::transform_histories(Self, Array[Operation], Array[Operation]) -> TransformedHistories raise HistoryError
 pub fn Engine::transform_x(Self, Operation, Operation) -> (Operation, Operation) raise OpError
+pub fn Engine::undo_history(Self, Snapshot, capacity? : Int32) -> UndoHistory raise UndoHistoryError
+pub fn Engine::update_projection(Self, Projection, Operation) -> ProjectionUpdate raise ProjectionError
 
 pub struct HistoryMerge {
   // private fields
@@ -195,11 +570,67 @@ pub fn InsertionAffinity::equal(Self, Self) -> Bool
 pub fn InsertionAffinity::not_equal(Self, Self) -> Bool
 pub fn InsertionAffinity::to_repr(Self) -> @debug.Repr
 
+#derive(@debug.Debug)
+pub(all) enum Instruction {
+  NumberAdd(Double)
+  ObjectInsert(@json.Json)
+  ObjectDelete(@json.Json)
+  ObjectReplace(@json.Json, @json.Json)
+  ListInsert(@json.Json)
+  ListDelete(@json.Json)
+  ListReplace(@json.Json, @json.Json)
+  ListMove(Int32)
+  StringInsert(String)
+  StringDelete(String)
+  SubtypeOperation(String, @json.Json)
+}
+pub fn Instruction::to_repr(Self) -> @debug.Repr
+
+pub(all) struct Interaction {
+  left_component : Int32
+  right_component : Int32
+  kind : InteractionKind
+}
+
+#derive(Eq, @debug.Debug)
+pub(all) enum InteractionKind {
+  SameValue
+  AncestorWrite
+  ListCoordinates
+  TextCoordinates
+  CommutativeAddition
+  OpaqueSubtypeAccess
+}
+pub fn InteractionKind::equal(Self, Self) -> Bool
+pub fn InteractionKind::not_equal(Self, Self) -> Bool
+pub fn InteractionKind::to_repr(Self) -> @debug.Repr
+
+pub(all) struct IterativeDiffMetrics {
+  visits : Int32
+  objects : Int32
+  arrays : Int32
+  strings : Int32
+  replacements : Int32
+  text_cells : Int64
+}
+
+pub(all) struct IterativeDiffOptions {
+  text : TextDiffOptions
+  text_encoding : TextEncoding
+  prefer_number_add : Bool
+  max_visits : Int32
+  max_components : Int32
+  max_depth : Int32
+}
+pub fn IterativeDiffOptions::default() -> Self
+
 pub struct Journal {
   // private fields
 }
 pub fn Journal::append(Self, Operation) -> Int32 raise HistoryError
 pub fn Journal::append_all(Self, Array[Operation]) -> Int32 raise HistoryError
+pub fn Journal::archive(Self) -> JournalArchive
+pub fn Journal::archive_range(Self, Int32, Int32) -> JournalArchive raise HistoryError
 pub fn Journal::compact(Self, Int32) -> Unit raise HistoryError
 pub fn Journal::head(Self) -> Int32
 pub fn Journal::integrate(Self, Int32, Array[Operation], text_encoding? : TextEncoding?) -> Int32 raise HistoryError
@@ -210,6 +641,65 @@ pub fn Journal::snapshot(Self) -> @json.Json?
 pub fn Journal::snapshot_at(Self, Int32) -> @json.Json? raise HistoryError
 pub fn Journal::snapshot_handle_at(Self, Int32) -> Snapshot raise HistoryError
 pub fn Journal::undo_operation(Self, Int32, Int32) -> Operation raise HistoryError
+
+pub struct JournalArchive {
+  // private fields
+}
+pub fn JournalArchive::base(Self) -> Snapshot
+pub fn JournalArchive::base_revision(Self) -> Int32
+pub fn JournalArchive::encode(Self, options? : EncodeOptions) -> String raise EncodeError
+pub fn JournalArchive::head(Self) -> Snapshot
+pub fn JournalArchive::head_revision(Self) -> Int32
+pub fn JournalArchive::join(Self, Self) -> Self raise ArchiveError
+pub fn JournalArchive::operations(Self) -> Array[Operation]
+pub fn JournalArchive::restore(Self, Engine) -> Journal raise ArchiveError
+pub fn JournalArchive::split(Self, Engine, Int32) -> (Self, Self) raise ArchiveError
+pub fn JournalArchive::to_json(Self) -> @json.Json
+
+pub struct JsonInput {
+  // private fields
+}
+pub fn JsonInput::finish(Self) -> @json.Json raise DecodeError
+pub fn JsonInput::length(Self) -> Int32
+pub fn JsonInput::new(options? : DecodeOptions) -> Self raise DecodeError
+pub fn JsonInput::push(Self, String) -> Unit raise DecodeError
+pub fn JsonInput::reset(Self) -> Unit
+
+pub struct LineDiff {
+  // private fields
+}
+pub fn LineDiff::metrics(Self) -> LineDiffMetrics
+pub fn LineDiff::operation(Self) -> TextOperation
+
+pub(all) struct LineDiffMetrics {
+  before_lines : Int32
+  after_lines : Int32
+  matched_lines : Int32
+  refined_regions : Int32
+  fallback_regions : Int32
+  text_cells : Int64
+}
+
+pub(all) struct LineDiffOptions {
+  alignment_cells : Int32
+  text_cells : Int64
+  max_units : Int32
+}
+pub fn LineDiffOptions::default() -> Self
+
+pub struct ListDiff {
+  // private fields
+}
+pub fn ListDiff::metrics(Self) -> ListDiffMetrics
+pub fn ListDiff::operation(Self) -> Operation
+
+pub(all) struct ListDiffMetrics {
+  retained : Int32
+  inserted : Int32
+  deleted : Int32
+  moved : Int32
+  changed_items : Int32
+}
 
 #derive(Eq, @debug.Debug)
 pub(all) enum Location {
@@ -241,17 +731,151 @@ pub fn LossReason::equal(Self, Self) -> Bool
 pub fn LossReason::not_equal(Self, Self) -> Bool
 pub fn LossReason::to_repr(Self) -> @debug.Repr
 
+pub struct MergeContribution {
+  // private fields
+}
+pub fn MergeContribution::after(Self) -> Snapshot
+pub fn MergeContribution::before(Self) -> Snapshot
+pub fn MergeContribution::branch(Self) -> Int32
+pub fn MergeContribution::original(Self) -> Array[Operation]
+pub fn MergeContribution::transformed(Self) -> Array[Operation]
+
+pub(all) struct MergeLimits {
+  max_branches : Int32
+  max_components : Int64
+  max_batch_crossings : Int64
+}
+pub fn MergeLimits::default() -> Self
+
+pub struct MergePreview {
+  // private fields
+}
+pub fn MergePreview::interactions(Self) -> Array[Interaction]
+pub fn MergePreview::left(Self) -> ApplyTrace
+pub fn MergePreview::left_after_right(Self) -> ApplyTrace
+pub fn MergePreview::result(Self) -> Snapshot
+pub fn MergePreview::right(Self) -> ApplyTrace
+pub fn MergePreview::right_after_left(Self) -> ApplyTrace
+
+pub struct MultiMerge {
+  // private fields
+}
+pub fn MultiMerge::base(Self) -> Snapshot
+pub fn MultiMerge::contributions(Self) -> Array[MergeContribution]
+pub fn MultiMerge::crossings(Self) -> Int64
+pub fn MultiMerge::operations(Self) -> Array[Operation]
+pub fn MultiMerge::result(Self) -> Snapshot
+
 pub struct Operation {
   // private fields
 }
+pub fn Operation::accesses(Self) -> Array[Access]
+pub fn Operation::concat(Self, Self) -> Self
+pub fn Operation::decode(String, options? : DecodeOptions) -> Self raise
+pub fn Operation::empty() -> Self
+pub fn Operation::encode(Self, options? : EncodeOptions) -> String raise EncodeError
 pub fn Operation::from_components(Array[Component]) -> Self
 pub fn Operation::from_json(@json.Json) -> Self raise OpError
 pub fn Operation::get_components(Self) -> Array[Component]
+pub fn Operation::interactions(Self, Self) -> Array[Interaction]
 pub fn Operation::length(Self) -> Int32
+pub fn Operation::may_affect(Self, Path) -> Bool
+pub fn Operation::metrics(Self) -> OperationMetrics
+pub fn Operation::pack(Self, limits? : PackingLimits) -> PackedOperations raise PackingError
 pub fn Operation::parse(String) -> Self raise OpError
 pub fn Operation::shatter(Self) -> Array[Self]
+pub fn Operation::single(Component) -> Self
+pub fn Operation::slice(Self, Int32, Int32) -> Self raise OpError
 pub fn Operation::stringify(Self) -> String raise OpError
+pub fn Operation::subtypes(Self) -> Array[String]
 pub fn Operation::to_json(Self) -> @json.Json
+pub fn Operation::wire_equivalent(Self, Self) -> Bool
+pub fn Operation::with_prefix(Self, Array[PathSegment]) -> Self raise OpError
+pub fn Operation::without_prefix(Self, Array[PathSegment]) -> Self?
+pub fn Operation::write_roots(Self) -> Array[Path]
+
+pub(all) struct OperationLimits {
+  max_components : Int32
+  max_path : Int32
+  max_payload_values : Int64
+  max_payload_depth : Int32
+  max_string_units : Int64
+  max_document_values : Int64
+  max_document_depth : Int32
+  allowed_subtypes : Array[String]?
+  allow_root_edits : Bool
+  allow_legacy_text : Bool
+}
+pub fn OperationLimits::default() -> Self
+
+pub(all) struct OperationMetrics {
+  components : Int32
+  path_segments : Int64
+  max_path : Int32
+  payload_values : Int64
+  payload_string_units : Int64
+  max_payload_depth : Int32
+  text_units : Int64
+  moves : Int32
+}
+
+pub(all) struct PackedBatchMetrics {
+  components : Int32
+  wire_units : Int32
+  payload_values : Int64
+}
+
+pub struct PackedOperations {
+  // private fields
+}
+pub fn PackedOperations::flatten(Self) -> Operation
+pub fn PackedOperations::metrics(Self) -> Array[PackedBatchMetrics]
+pub fn PackedOperations::operations(Self) -> Array[Operation]
+pub fn PackedOperations::wire(Self) -> Array[@json.Json]
+
+pub(all) struct PackingLimits {
+  max_components : Int32
+  max_wire_units : Int32
+  max_payload_values : Int64
+}
+pub fn PackingLimits::default() -> Self
+
+#derive(@debug.Debug)
+pub struct Path {
+  // private fields
+}
+pub fn Path::child_index(Self, Int32) -> Self raise OpError
+pub fn Path::child_key(Self, String) -> Self
+pub fn Path::common_ancestor(Self, Self) -> Self
+pub fn Path::equal(Self, Self) -> Bool
+pub fn Path::from_json(@json.Json) -> Self raise OpError
+pub fn Path::is_root(Self) -> Bool
+pub fn Path::join(Self, Self) -> Self
+pub fn Path::last(Self) -> PathSegment?
+pub fn Path::length(Self) -> Int32
+pub fn Path::matches(Self, Array[PathPattern]) -> Bool
+pub fn Path::new(Array[PathSegment]) -> Self raise OpError
+pub fn Path::parent(Self) -> Self?
+pub fn Path::parse(String) -> Self raise OpError
+pub fn Path::relative_to(Self, Self) -> Self?
+pub fn Path::root() -> Self
+pub fn Path::segments(Self) -> Array[PathSegment]
+pub fn Path::starts_with(Self, Self) -> Bool
+pub fn Path::to_json(Self) -> @json.Json
+pub fn Path::to_pointer(Self) -> String
+pub fn Path::to_repr(Self) -> @debug.Repr
+
+#derive(Eq, @debug.Debug)
+pub(all) enum PathPattern {
+  ExactKey(String)
+  ExactIndex(Int32)
+  AnyKey
+  AnyIndex
+  Descendants
+}
+pub fn PathPattern::equal(Self, Self) -> Bool
+pub fn PathPattern::not_equal(Self, Self) -> Bool
+pub fn PathPattern::to_repr(Self) -> @debug.Repr
 
 #derive(Eq, @debug.Debug)
 pub(all) enum PathSegment {
@@ -261,6 +885,76 @@ pub(all) enum PathSegment {
 pub fn PathSegment::equal(Self, Self) -> Bool
 pub fn PathSegment::not_equal(Self, Self) -> Bool
 pub fn PathSegment::to_repr(Self) -> @debug.Repr
+
+pub struct Projection {
+  // private fields
+}
+pub fn Projection::patterns(Self) -> Array[PathPattern]
+pub fn Projection::refresh(Self, Snapshot) -> ProjectionUpdate raise ProjectionError
+pub fn Projection::selection(Self) -> Selection
+pub fn Projection::snapshot(Self) -> Snapshot
+
+pub struct ProjectionChange {
+  // private fields
+}
+pub fn ProjectionChange::after(Self) -> @json.Json?
+pub fn ProjectionChange::before(Self) -> @json.Json?
+pub fn ProjectionChange::kind(Self) -> ProjectionChangeKind
+pub fn ProjectionChange::path(Self) -> Path
+
+#derive(Eq, @debug.Debug)
+pub(all) enum ProjectionChangeKind {
+  AddedMatch
+  RemovedMatch
+  ChangedMatch
+}
+pub fn ProjectionChangeKind::equal(Self, Self) -> Bool
+pub fn ProjectionChangeKind::not_equal(Self, Self) -> Bool
+pub fn ProjectionChangeKind::to_repr(Self) -> @debug.Repr
+
+pub struct ProjectionUpdate {
+  // private fields
+}
+pub fn ProjectionUpdate::changes(Self) -> Array[ProjectionChange]
+pub fn ProjectionUpdate::projection(Self) -> Projection
+
+pub(all) struct QueryLimits {
+  max_visits : Int32
+  max_matches : Int32
+  max_depth : Int32
+}
+pub fn QueryLimits::default() -> Self
+
+pub struct RebaseBuffer {
+  // private fields
+}
+pub fn RebaseBuffer::accept(Self, RebasePreview) -> Snapshot raise RebaseError
+pub fn RebaseBuffer::append(Self, Operation) -> Snapshot raise RebaseError
+pub fn RebaseBuffer::append_all(Self, Array[Operation]) -> Snapshot raise RebaseError
+pub fn RebaseBuffer::base(Self) -> Snapshot
+pub fn RebaseBuffer::confirm_prefix(Self, Int32) -> Snapshot raise RebaseError
+pub fn RebaseBuffer::length(Self) -> Int32
+pub fn RebaseBuffer::operations(Self) -> Array[Operation]
+pub fn RebaseBuffer::preview(Self, Array[Operation], text_encoding? : TextEncoding?) -> RebasePreview raise RebaseError
+pub fn RebaseBuffer::snapshot(Self) -> Snapshot
+
+pub struct RebasePreview {
+  // private fields
+}
+pub fn RebasePreview::base(Self) -> Snapshot
+pub fn RebasePreview::external_after_pending(Self) -> Array[Operation]
+pub fn RebasePreview::pending(Self) -> Array[Operation]
+pub fn RebasePreview::snapshot(Self) -> Snapshot
+
+pub struct Selection {
+  // private fields
+}
+pub fn Selection::length(Self) -> Int32
+pub fn Selection::paths(Self) -> Array[Path]
+pub fn Selection::snapshots(Self) -> Array[Snapshot] raise OpError
+pub fn Selection::track(Self) -> TrackedSnapshot raise TrackingError
+pub fn Selection::values(Self) -> Array[@json.Json] raise OpError
+pub fn Selection::visits(Self) -> Int32
 
 #derive(Eq, @debug.Debug)
 pub(all) enum Side {
@@ -274,10 +968,39 @@ pub fn Side::to_repr(Self) -> @debug.Repr
 pub struct Snapshot {
   // private fields
 }
+pub fn Snapshot::at(Self, Path) -> @json.Json raise OpError
+pub fn Snapshot::compare(Self, Self, limits? : ComparisonLimits) -> ValueComparison raise ComparisonError
+pub fn Snapshot::contains_path(Self, Path) -> Bool
+pub fn Snapshot::contains_pointer(Self, String) -> Bool raise PointerError
+pub fn Snapshot::equivalent(Self, Self) -> Bool
+pub fn Snapshot::find_identity(Self, Path, String, String) -> Path? raise OpError
+pub fn Snapshot::member_paths(Self, Path) -> Array[Path] raise OpError
+pub fn Snapshot::metrics(Self) -> ValueMetrics
 pub fn Snapshot::new(@json.Json?) -> Self raise OpError
+pub fn Snapshot::project(Self, Array[PathPattern], limits? : QueryLimits) -> Projection raise QueryError
 pub fn Snapshot::read(Self, Array[PathSegment]) -> @json.Json raise OpError
+pub fn Snapshot::read_pointer(Self, String) -> @json.Json raise PointerError
+pub fn Snapshot::resolve_pointer(Self, String, allow_missing_leaf? : Bool) -> Path raise PointerError
+pub fn Snapshot::select(Self, Array[PathPattern], limits? : QueryLimits) -> Selection raise QueryError
+pub fn Snapshot::size_at(Self, Path) -> Int32 raise OpError
 pub fn Snapshot::subtree(Self, Array[PathSegment]) -> Self raise OpError
+pub fn Snapshot::test_condition(Self, Condition) -> Bool raise GuardError
 pub fn Snapshot::to_json(Self) -> @json.Json?
+pub fn Snapshot::track(Self, Array[Location]) -> TrackedSnapshot raise TrackingError
+
+pub struct SnapshotDiff {
+  // private fields
+}
+pub fn SnapshotDiff::after(Self) -> Snapshot
+pub fn SnapshotDiff::before(Self) -> Snapshot
+pub fn SnapshotDiff::metrics(Self) -> IterativeDiffMetrics
+pub fn SnapshotDiff::operation(Self) -> Operation
+
+pub(all) struct SourcePosition {
+  offset : Int32
+  line : Int32
+  column : Int32
+}
 
 pub(all) struct Subtype {
   apply : (@json.Json, @json.Json) -> @json.Json raise OpError
@@ -285,6 +1008,43 @@ pub(all) struct Subtype {
   invert : (@json.Json) -> @json.Json raise OpError
   transform : (@json.Json, @json.Json, Side) -> @json.Json raise OpError
 }
+
+pub(all) struct TextChange {
+  component : Int32
+  offset : Int32
+  inserted : String
+  deleted : String
+  before_position : SourcePosition
+  after_position : SourcePosition
+  before_context : TextExcerpt
+  after_context : TextExcerpt
+}
+
+pub(all) struct TextCoordinates {
+  utf16 : Int32
+  code_points : Int32
+  utf8_bytes : Int32
+}
+
+pub struct TextDiff {
+  // private fields
+}
+pub fn TextDiff::metrics(Self) -> TextDiffMetrics
+pub fn TextDiff::operation(Self) -> TextOperation
+
+pub(all) struct TextDiffMetrics {
+  prefix_units : Int32
+  suffix_units : Int32
+  matched_units : Int32
+  compared_cells : Int64
+  exact_alignment : Bool
+}
+
+pub(all) struct TextDiffOptions {
+  max_cells : Int64
+  max_units : Int32
+}
+pub fn TextDiffOptions::default() -> Self
 
 #derive(Eq, @debug.Debug)
 pub(all) enum TextEncoding {
@@ -295,6 +1055,58 @@ pub fn TextEncoding::equal(Self, Self) -> Bool
 pub fn TextEncoding::not_equal(Self, Self) -> Bool
 pub fn TextEncoding::to_repr(Self) -> @debug.Repr
 
+pub(all) struct TextExcerpt {
+  start : Int32
+  end : Int32
+  text : String
+}
+
+pub struct TextIndex {
+  // private fields
+}
+pub fn TextIndex::at_code_point(Self, Int32) -> TextCoordinates raise CoordinateError
+pub fn TextIndex::at_utf16(Self, Int32) -> TextCoordinates raise CoordinateError
+pub fn TextIndex::at_utf8(Self, Int32) -> TextCoordinates raise CoordinateError
+pub fn TextIndex::lengths(Self) -> TextCoordinates
+pub fn TextIndex::line_count(Self) -> Int32
+pub fn TextIndex::line_offset(Self, Int32, Int32) -> Int32 raise CoordinateError
+pub fn TextIndex::line_position(Self, Int32) -> (Int32, Int32) raise CoordinateError
+pub fn TextIndex::nearest_boundary(Self, Int32, InsertionAffinity) -> Int32 raise CoordinateError
+pub fn TextIndex::new(String) -> Self raise CoordinateError
+pub fn TextIndex::slice_code_points(Self, Int32, Int32) -> String raise CoordinateError
+pub fn TextIndex::splice_code_points(Self, Int32, Int32, String) -> TextOperation raise
+
+#derive(Eq, @debug.Debug)
+pub(all) enum TextInstruction {
+  InsertText(Int32, String)
+  DeleteText(Int32, String)
+}
+pub fn TextInstruction::equal(Self, Self) -> Bool
+pub fn TextInstruction::not_equal(Self, Self) -> Bool
+pub fn TextInstruction::to_repr(Self) -> @debug.Repr
+
+pub struct TextOperation {
+  // private fields
+}
+pub fn TextOperation::apply(Self, String) -> String raise OpError
+pub fn TextOperation::as_json0(Self, Path, encoding? : TextEncoding) -> Operation
+pub fn TextOperation::compose(Self, Self) -> Self
+pub fn TextOperation::empty() -> Self
+pub fn TextOperation::from_json(@json.Json) -> Self raise OpError
+pub fn TextOperation::instructions(Self) -> Array[TextInstruction]
+pub fn TextOperation::invert(Self) -> Self
+pub fn TextOperation::length(Self) -> Int32
+pub fn TextOperation::net_length(Self) -> Int64
+pub fn TextOperation::new(Array[TextInstruction]) -> Self raise OpError
+pub fn TextOperation::normalize(Self) -> Self
+pub fn TextOperation::parse(String) -> Self raise OpError
+pub fn TextOperation::splice(String, Int32, Int32, String) -> Self raise OpError
+pub fn TextOperation::to_json(Self) -> @json.Json
+pub fn TextOperation::trace(Self, String, context_units? : Int32) -> TextTrace raise OpError
+pub fn TextOperation::transform(Self, Self, Side) -> Self raise OpError
+pub fn TextOperation::transform_pair(Self, Self) -> (Self, Self) raise OpError
+pub fn TextOperation::transform_position(Self, Int32, side? : Side) -> Int32 raise OpError
+
 #derive(Eq, @debug.Debug)
 pub(all) struct TextPosition {
   offset : Int32
@@ -304,6 +1116,25 @@ pub fn TextPosition::equal(Self, Self) -> Bool
 pub fn TextPosition::not_equal(Self, Self) -> Bool
 pub fn TextPosition::to_repr(Self) -> @debug.Repr
 
+pub struct TextProjection {
+  // private fields
+}
+pub fn TextProjection::after(Self) -> String
+pub fn TextProjection::before(Self) -> String
+pub fn TextProjection::components(Self) -> Array[Int32]
+pub fn TextProjection::final_path(Self) -> Path
+pub fn TextProjection::initial_path(Self) -> Path
+pub fn TextProjection::operation(Self) -> TextOperation
+pub fn TextProjection::snapshot(Self) -> Snapshot
+pub fn TextProjection::trace(Self, context_units? : Int32) -> TextTrace raise OpError
+
+pub struct TextTrace {
+  // private fields
+}
+pub fn TextTrace::after(Self) -> String
+pub fn TextTrace::before(Self) -> String
+pub fn TextTrace::changes(Self) -> Array[TextChange]
+
 pub struct TrackedApply {
   // private fields
 }
@@ -311,11 +1142,41 @@ pub fn TrackedApply::locations(Self) -> Array[Location?]
 pub fn TrackedApply::losses(Self) -> Array[LocationLoss?]
 pub fn TrackedApply::snapshot(Self) -> @json.Json?
 
+pub struct TrackedSnapshot {
+  // private fields
+}
+pub fn TrackedSnapshot::alive(Self) -> Int32
+pub fn TrackedSnapshot::batches(Self) -> Int32
+pub fn TrackedSnapshot::location(Self, Int32) -> Location? raise OpError
+pub fn TrackedSnapshot::locations(Self) -> Array[Location?]
+pub fn TrackedSnapshot::losses(Self) -> Array[LocationLoss?]
+pub fn TrackedSnapshot::paths(Self) -> Array[Path?]
+pub fn TrackedSnapshot::retain(Self, Array[Int32]) -> Self raise OpError
+pub fn TrackedSnapshot::snapshot(Self) -> Snapshot
+pub fn TrackedSnapshot::values(Self) -> Array[@json.Json?] raise OpError
+pub fn TrackedSnapshot::with_anchors(Self, Array[Location]) -> Self raise TrackingError
+
 pub struct TransformedHistories {
   // private fields
 }
 pub fn TransformedHistories::left_after_right(Self) -> Array[Operation]
 pub fn TransformedHistories::right_after_left(Self) -> Array[Operation]
+
+pub struct UndoHistory {
+  // private fields
+}
+pub fn UndoHistory::apply_external(Self, Operation) -> Snapshot raise UndoHistoryError
+pub fn UndoHistory::clear(Self) -> Unit raise UndoHistoryError
+pub fn UndoHistory::peek_redo(Self) -> Operation?
+pub fn UndoHistory::peek_undo(Self) -> Operation?
+pub fn UndoHistory::record(Self, Operation, label? : String, join_previous? : Bool) -> Snapshot raise UndoHistoryError
+pub fn UndoHistory::redo(Self) -> Snapshot raise UndoHistoryError
+pub fn UndoHistory::redo_count(Self) -> Int32
+pub fn UndoHistory::redo_labels(Self) -> Array[String]
+pub fn UndoHistory::snapshot(Self) -> Snapshot
+pub fn UndoHistory::undo(Self) -> Snapshot raise UndoHistoryError
+pub fn UndoHistory::undo_count(Self) -> Int32
+pub fn UndoHistory::undo_labels(Self) -> Array[String]
 
 pub struct UndoableEdit {
   // private fields
@@ -323,6 +1184,38 @@ pub struct UndoableEdit {
 pub fn UndoableEdit::inverse(Self) -> Operation
 pub fn UndoableEdit::operation(Self) -> Operation
 pub fn UndoableEdit::snapshot(Self) -> Snapshot
+
+pub struct ValueComparison {
+  // private fields
+}
+pub fn ValueComparison::differences(Self) -> Array[ValueDifference]
+pub fn ValueComparison::equal(Self) -> Bool
+pub fn ValueComparison::visits(Self) -> Int32
+
+pub struct ValueDifference {
+  // private fields
+}
+pub fn ValueDifference::after(Self) -> @json.Json?
+pub fn ValueDifference::before(Self) -> @json.Json?
+pub fn ValueDifference::kind(Self) -> DifferenceKind
+pub fn ValueDifference::path(Self) -> Path
+
+pub(all) struct ValueMetrics {
+  values : Int64
+  containers : Int64
+  strings : Int64
+  string_units : Int64
+  numbers : Int64
+  max_depth : Int32
+}
+
+pub struct VerifiedComposition {
+  // private fields
+}
+pub fn VerifiedComposition::checkpoints(Self) -> Array[Snapshot]
+pub fn VerifiedComposition::decision(Self) -> CompositionDecision
+pub fn VerifiedComposition::operation(Self) -> Operation
+pub fn VerifiedComposition::snapshot(Self) -> Snapshot
 
 // Type aliases
 

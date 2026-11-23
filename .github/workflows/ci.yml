@@ -35,6 +35,9 @@ jobs:
       - name: Run persistent snapshot benchmarks
         run: moon run benchmarks/persistent --target "${{ matrix.target }}" --release --frozen
 
+      - name: Run algorithm workload benchmarks
+        run: moon run benchmarks/algorithms --target "${{ matrix.target }}" --release --frozen
+
   oracle:
     name: Node / interoperability and packaging
     runs-on: ubuntu-latest
@@ -64,3 +67,9 @@ jobs:
             EXTENDED_SEED="$seed" npm run extended
           done
       - run: npm run package-smoke
+      - name: Differential optimized operation generators
+        run: |
+          for seed in 1 20261123 4294967295; do
+            OPTIMIZED_SEED="$seed" npm run optimized
+          done
+      - run: node source-size.mjs

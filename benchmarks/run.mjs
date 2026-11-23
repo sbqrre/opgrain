@@ -21,7 +21,7 @@ const environment = {
 };
 const runs = [];
 for (const target of targets) {
-  for (const workload of ["benchmarks", "benchmarks/persistent"]) {
+  for (const workload of ["benchmarks", "benchmarks/persistent", "benchmarks/algorithms"]) {
     runs.push({
       target, workload,
       results: JSON.parse(execute(["run", workload, "--target", target, "--release", "--frozen", "--quiet"])),

@@ -107,7 +107,7 @@ fn Engine::verify_component(
   let pair = preimage_pair(snapshot, component) catch {
     error => raise ComponentFailed(index, path.copy(), error)
   }
-  if pair is Some((expected, actual)) && expected != actual {
+  if pair is Some((expected, actual)) && !same_optional_json(expected, actual) {
     raise StalePreimage(
       index,
       path.copy(),

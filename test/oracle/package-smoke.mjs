@@ -29,7 +29,7 @@ if (!registry) {
   const entries = run(windows ? "tar" : "unzip", windows ? ["-tf", archive] : ["-Z1", archive], fixture)
     .trim().split(/\r?\n/).map(entry => entry.replaceAll("\\", "/"));
   assert.ok(entries.every(entry => !entry.startsWith("/") && !entry.split("/").includes("..")));
-  assert.ok(["moon.mod", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md", "snapshot.mbt", "undo.mbt"].every(name => entries.includes(name)));
+  assert.ok(["moon.mod", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md", "snapshot.mbt", "undo.mbt", "indexed_diff.mbt", "decoder.mbt", "rebase_buffer.mbt"].every(name => entries.includes(name)));
   assert.ok(entries.every(entry => !/^(test\/|benchmarks\/|\.github\/)|_(wb)?test\.mbt$/.test(entry)));
   const library = join(fixture, "opgrain");
   mkdirSync(library);
@@ -46,6 +46,15 @@ writeFileSync(join(consumer, "main.mbt"), String.raw`
 fn main {
   try {
     let engine = @opgrain.Engine::new()
+    let indexed = engine.diff_keyed_list(
+      [{ "id": "a" }, { "id": "b" }],
+      [{ "id": "b" }, { "id": "a" }], "id",
+    )
+    guard indexed.metrics().moved == 1 else { abort("indexed list diff") }
+    let text = @opgrain.diff_text("Review😀", "Ready😀").operation()
+    guard text.apply("Review😀") == "Ready😀" else { abort("UTF16 diff") }
+    let decoded = @opgrain.decode_json(@opgrain.encode_json(Json::string("Review😀")))
+    guard decoded == Json::string("Review😀") else { abort("bounded codec") }
     let base = @opgrain.parse_json("{\"tasks\":[\"Review\"]}")
     let left = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Test\"}]")
     let right = @opgrain.Operation::parse("[{\"p\":[\"tasks\",0],\"li\":\"Publish\"}]")

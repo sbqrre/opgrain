@@ -37,6 +37,39 @@ fn evaluate(engine : @opgrain.Engine, request : Json) -> Json? raise {
     raise @opgrain.InvalidJson("expected a request with a command")
   }
   match command {
+    "keyedDiff" => {
+      guard required(fields, "snapshot") is Array(before) &&
+        required(fields, "other") is Array(after) else {
+        raise @opgrain.InvalidJson("keyed diff expects arrays")
+      }
+      Some(engine.diff_keyed_list(before, after, "id").operation().to_json())
+    }
+    "snapshotDiff" =>
+      Some(
+        engine
+        .diff_snapshots(
+          @opgrain.Snapshot::new(fields.get("snapshot")),
+          @opgrain.Snapshot::new(fields.get("other")),
+        )
+        .operation()
+        .to_json(),
+      )
+    "textDiff" | "lineDiff" => {
+      guard required(fields, "snapshot") is String(before) &&
+        required(fields, "other") is String(after) else {
+        raise @opgrain.InvalidJson("text diff expects strings")
+      }
+      let edit = if command == "textDiff" {
+        @opgrain.diff_text(before, after).operation()
+      } else {
+        @opgrain.diff_text_lines(before, after).operation()
+      }
+      Some(edit.as_json0(@opgrain.Path::root()).to_json())
+    }
+    "codec" =>
+      Some(
+        @opgrain.decode_json(@opgrain.encode_json(required(fields, "snapshot"))),
+      )
     "apply" =>
       engine.apply_optional(fields.get("snapshot"), operation(fields, "op"))
     "applySnapshot" =>

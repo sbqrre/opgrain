@@ -47,14 +47,16 @@ println(@opgrain.stringify_json(next))
 安装指定版本后，在调用方的 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
 
 ```sh
-moon add sbqrre/opgrain@0.2.0
+moon add sbqrre/opgrain@0.3.0
 ```
 
-库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.2.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.3.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
 
 处理离线看板时，可以用 `Engine::draft` 记录真实旧值，或用 `Engine::diff` 从两份快照生成 JSON0 操作。示例的第六个案例将卡片移动与离线标题编辑合并，跟随标题光标，再用 `Journal::revert` 撤销移动并保留标题编辑。详见 [快照编辑、合并与位置跟踪](docs/editing.md)。
 
-需要保留多个看板版本时，`Snapshot` 句柄共享未编辑分支，`Draft::transaction` 原子提交一组修改，`Journal::compact` 按绝对版本号压缩旧历史。`prepare_edit` 可以用实际旧值构造并验证撤销。示例还演示批量发布任务、压缩后的离线编辑合并，以及浮点舍入后的工分撤销，共 9 个案例。见 [快照、事务与历史压缩](docs/snapshots.md)。
+需要保留多个看板版本时，`Snapshot` 句柄共享未编辑分支，`Draft::transaction` 原子提交一组修改，`Journal::compact` 按绝对版本号压缩旧历史。`prepare_edit` 可以用实际旧值构造并验证撤销。示例还演示批量发布任务、压缩后的离线编辑合并，以及浮点舍入后的工分撤销，共 9 个基础案例。见 [快照、事务与历史压缩](docs/snapshots.md)。
+
+按卡片 ID 重排可以使用 `diff_keyed_list`，文本差分支持 UTF-16 单元和整行细化，深层快照可使用显式栈差分与比较。`BranchPair`、`RebaseBuffer` 和 `UndoHistory` 提供本地分支预览、待定操作重定位和分组撤销。新增四个可运行看板案例，合计 13 个；见 [操作生成与观察](docs/algorithms.md)、[本地历史](docs/local-history.md) 和 [线格式与预算](docs/wire-limits.md)。
 
 ### 互通与边界
 
@@ -70,6 +72,7 @@ npm --prefix test/oracle test
 npm --prefix test/oracle run fixtures -- --check
 npm --prefix test/oracle run live
 npm --prefix test/oracle run extended
+npm --prefix test/oracle run optimized
 npm --prefix test/oracle run package-smoke
 moon test --frozen --deny-warn --target native
 moon test --frozen --deny-warn --target js

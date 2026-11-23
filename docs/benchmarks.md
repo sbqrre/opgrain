@@ -47,3 +47,41 @@ node benchmarks/compare.mjs js
 持久快照组在计时前构造句柄。snapshot-verified 计入路径复制及旧值校验，返回不透明句柄。journal-handle 和 compact 的输入为既有句柄，后者还将保留区间推进到第 80 版。exact-undo 包含应用正向、构造逆操作、实际撤销并比较恢复结果。导出完整 JSON 的成本需单独计算。
 
 历史追加的收益来自共享未编辑分支，差量生成也减少了不必要的整文档复制。解析、序列化和很短的操作受额外校验、分配、JIT 与垃圾回收影响，一部分样本高于旧版。短调用的最小值、中位数和最大值可能差异明显，复测脚本保留三者。CI 只检查基准可执行及其结果校验，不设置绝对耗时门槛。
+
+## 0.3.0 操作生成与跟踪实测
+
+2026-11-23，在 Windows 10.0.19045、Intel Core i7-9700 3.00GHz、Node v24.19.0 上实际运行。MoonBit CLI 0.1.20261104，moonc v0.10.20+65efd5b93，moonrun 0.1.20261104。全部 release 构建，每项先预热 3 次，再计时 9 批；表中为每次调用的微秒数。运行 `node benchmarks/run.mjs` 同时复现原负载、持久快照负载和新增算法负载；单独运行 `moon run benchmarks/algorithms --target js --release --frozen` 可只复现新负载。
+
+下列数据是确定性的合成任务看板和任务说明文本，不是线上用户延迟或吞吐量承诺。列表输入为 1,000 张卡片向左轮转一位，标题包含中文、emoji 和组合字符。两个列表生成器都验证应用结果；旧的顺序生成器执行 999 次移动，新索引生成器执行 1 次。计时只包含操作生成，不包含最终整份 JSON 导出或网络成本，输入校验与复制包含在内。
+
+跟踪负载为 1,000 张卡片、100 个节点锚点和一个工分增量。旧接口的输入导出与输出副本计入成本；持久接口保留不透明快照，因此这组差异也包含所有权模型的成本，不能解释为纯变换算法加速。文本负载为 200 行中的一行变化；行级差分需分割整段文本，在这组数据上明显慢于利用共同前后缀的直接 UTF-16 差分。它不被作为默认更快的算法宣传。编解码负载包含整份 JSON 导出、编码、解码及预算检查。
+| 目标 | 工作负载 | min μs | median μs | max μs |
+| --- | --- | ---: | ---: | ---: |
+| native | keyed-diff-sequential-rotate-1000 | 12067.40 | 13742.00 | 20142.80 |
+| native | keyed-diff-indexed-rotate-1000 | 4210.36 | 4749.44 | 5079.20 |
+| native | text-unit-diff-200-lines | 21.40 | 21.46 | 23.38 |
+| native | text-line-diff-200-lines | 1219.75 | 1244.09 | 1312.72 |
+| native | tracking-detached-1000-tasks-100-anchors | 2050.30 | 2189.79 | 2303.30 |
+| native | tracking-persistent-1000-tasks-100-anchors | 31.28 | 32.36 | 36.14 |
+| native | bounded-codec-1000-tasks | 30193.70 | 32748.98 | 34099.20 |
+| js | keyed-diff-sequential-rotate-1000 | 10599.10 | 14919.20 | 16280.30 |
+| js | keyed-diff-indexed-rotate-1000 | 2199.60 | 2496.82 | 3854.38 |
+| js | text-unit-diff-200-lines | 39.51 | 49.13 | 112.41 |
+| js | text-line-diff-200-lines | 318.70 | 342.57 | 430.79 |
+| js | tracking-detached-1000-tasks-100-anchors | 648.61 | 685.16 | 1045.34 |
+| js | tracking-persistent-1000-tasks-100-anchors | 16.52 | 20.03 | 35.68 |
+| js | bounded-codec-1000-tasks | 8535.16 | 9158.80 | 10991.34 |
+| wasm | keyed-diff-sequential-rotate-1000 | 18972.20 | 20084.50 | 23485.50 |
+| wasm | keyed-diff-indexed-rotate-1000 | 3924.72 | 4003.40 | 4796.46 |
+| wasm | text-unit-diff-200-lines | 33.38 | 36.10 | 91.12 |
+| wasm | text-line-diff-200-lines | 220.34 | 232.97 | 284.22 |
+| wasm | tracking-detached-1000-tasks-100-anchors | 1652.29 | 1718.40 | 1987.49 |
+| wasm | tracking-persistent-1000-tasks-100-anchors | 38.23 | 42.21 | 68.11 |
+| wasm | bounded-codec-1000-tasks | 18839.36 | 19297.12 | 20677.92 |
+| wasm-gc | keyed-diff-sequential-rotate-1000 | 3070.20 | 4215.10 | 5097.10 |
+| wasm-gc | keyed-diff-indexed-rotate-1000 | 1899.52 | 2111.56 | 2935.70 |
+| wasm-gc | text-unit-diff-200-lines | 18.98 | 21.75 | 24.04 |
+| wasm-gc | text-line-diff-200-lines | 100.26 | 109.58 | 177.41 |
+| wasm-gc | tracking-detached-1000-tasks-100-anchors | 332.92 | 371.70 | 473.39 |
+| wasm-gc | tracking-persistent-1000-tasks-100-anchors | 9.32 | 10.57 | 20.34 |
+| wasm-gc | bounded-codec-1000-tasks | 6497.38 | 7177.44 | 9047.98 |

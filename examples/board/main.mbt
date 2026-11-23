@@ -125,6 +125,10 @@ fn main {
     show_transactions()
     show_compaction()
     show_exact_undo()
+    show_indexed_reorder()
+    show_branch_review()
+    show_guarded_batch()
+    show_rebased_undo()
   } catch {
     error => abort(@debug.to_string(error))
   }
