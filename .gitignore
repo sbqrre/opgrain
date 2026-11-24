@@ -2,3 +2,6 @@
 /.mooncakes/
 /test/oracle/node_modules/
 fuzzercrash.data
+/benchmarks/**/pkg.generated.mbti
+/examples/**/pkg.generated.mbti
+/test/driver/pkg.generated.mbti

@@ -27,10 +27,20 @@ jobs:
           echo "$HOME/.moon/bin" >> "$GITHUB_PATH"
       - run: moon version --all
       - run: moon fmt --check
+      - name: Check source and dependencies
+        run: moon check --frozen --deny-warn --target "${{ matrix.target }}"
+      - name: Build release artifacts
+        run: moon build --frozen --deny-warn --target "${{ matrix.target }}" --release
+      - name: Check generated public interface
+        run: |
+          moon info --frozen .
+          git diff --exit-code -- pkg.generated.mbti
       - name: Test core and fixtures
         run: moon test --frozen --deny-warn --target "${{ matrix.target }}"
       - name: Run the task board example
         run: moon run examples/board --target "${{ matrix.target }}" --frozen
+      - name: Run the README example
+        run: moon run examples/quickstart --target "${{ matrix.target }}" --frozen
 
       - name: Run persistent snapshot benchmarks
         run: moon run benchmarks/persistent --target "${{ matrix.target }}" --release --frozen
@@ -52,6 +62,7 @@ jobs:
           cache: npm
           cache-dependency-path: test/oracle/package-lock.json
       - run: npm ci --ignore-scripts
+      - run: npm run docs
       - run: npm test
       - run: npm run fixtures -- --check
       - run: npm run test:reduce

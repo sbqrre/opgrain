@@ -42,7 +42,7 @@ members = ["opgrain", "app"]
 
 ```moonbit
 import {
-  "sbqrre/opgrain@0.2.0",
+  "sbqrre/opgrain@0.3.1",
 }
 ```
 

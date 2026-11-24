@@ -1,3 +1,8 @@
+// JSON0/text0 semantics adapted from ottypes/json0, ot-json0@1.1.0.
+// Copyright 2011 ottypes library contributors.
+// MoonBit implementation and adaptations copyright (c) 2026 sbqrre.
+// See THIRD_PARTY_NOTICES.md and LICENSES/ot-json0-1.1.0.txt.
+
 ///|
 // Cross each component in sequence. A split right edit crosses the unprocessed tail.
 fn[A] transform_pair(

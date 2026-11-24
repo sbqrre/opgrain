@@ -1,3 +1,8 @@
+// JSON0/text0 semantics adapted from ottypes/json0, ot-json0@1.1.0.
+// Copyright 2011 ottypes library contributors.
+// MoonBit implementation and adaptations copyright (c) 2026 sbqrre.
+// See THIRD_PARTY_NOTICES.md and LICENSES/ot-json0-1.1.0.txt.
+
 ///|
 /// An operation subtype handles its own JSON payload and snapshot.
 pub(all) struct Subtype {

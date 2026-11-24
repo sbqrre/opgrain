@@ -1,6 +1,6 @@
 name = "sbqrre/opgrain"
 
-version = "0.3.0"
+version = "0.3.1"
 
 description = "JSON0 operational transformation for MoonBit"
 

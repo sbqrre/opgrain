@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "docs": "node docs.mjs",
     "test": "node test-upstream.mjs",
     "fixtures": "node fixtures.mjs",
     "bridge": "node bridge-smoke.mjs",

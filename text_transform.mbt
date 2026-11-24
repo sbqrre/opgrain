@@ -1,3 +1,8 @@
+// JSON0/text0 semantics adapted from ottypes/json0, ot-json0@1.1.0.
+// Copyright 2011 ottypes library contributors.
+// MoonBit implementation and adaptations copyright (c) 2026 sbqrre.
+// See THIRD_PARTY_NOTICES.md and LICENSES/ot-json0-1.1.0.txt.
+
 ///|
 fn shift_text_position(position : Int32, length : Int32) -> Int32 raise OpError {
   guard position <= 2147483647 - length else {

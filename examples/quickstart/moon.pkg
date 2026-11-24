@@ -1,0 +1,5 @@
+import {
+  "sbqrre/opgrain",
+}
+
+pkgtype(kind: "executable")

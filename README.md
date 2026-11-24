@@ -33,24 +33,51 @@ moon run examples/board --target js
 | 删除卡片时另一端调整工分 | 删除载荷保留更新后的工分，撤销删除能恢复修改过的卡片 |
 | 删除标题片段时另一端在 emoji 后插入 | `text0` 按 UTF-16 偏移拆分删除，保留并发插入 |
 
+opgrain 提供兼容 JSON0 线格式的 MoonBit JSON 并发操作引擎，适用于交换和转换任务看板的数据操作。核心库不调用 JavaScript 上游；同步服务器、网络传输、权限、数据库和完整编辑器由接入方提供。
+
 ### 操作入口
 
 `Operation::parse` 从 JSON0 操作数组读取已校验的组件。用 `apply` 得到新文档，`compose` 合并同一条历史中的连续操作，`invert` 构造逆操作。用 `transform_x` 计算一对并发操作，或用 `transform` 和明确的 `Left` / `Right` 计算单侧结果。
 
-```moonbit
-let board = @opgrain.parse_json("{\"tasks\":[\"Review\"]}")
-let op = @opgrain.Operation::parse("[{\"p\":[\"tasks\",1],\"li\":\"Publish\"}]")
-let next = @opgrain.apply(board, op)
-println(@opgrain.stringify_json(next))
-```
-
-安装指定版本后，在调用方的 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+在新调用方中安装已发布版本：
 
 ```sh
-moon add sbqrre/opgrain@0.3.0
+moon new board-client --user sbqrre --name board-client
+cd board-client
+moon add sbqrre/opgrain@0.3.1
 ```
 
-库模块名为 `sbqrre/opgrain`。从源代码使用时，把本库和调用方的模块放入同一个 `moon.work`，在调用方的 `moon.mod` 中声明 `"sbqrre/opgrain@0.3.0"`，并在 `moon.pkg` 中导入 `"sbqrre/opgrain"`。
+把 `cmd/main/moon.pkg` 设为：
+
+```moonbit
+import {
+  "sbqrre/opgrain",
+}
+
+pkgtype(kind: "executable")
+```
+
+把 `cmd/main/main.mbt` 设为以下完整程序：
+
+```moonbit
+///|
+fn main {
+  try {
+    let board = @opgrain.parse_json("{\"tasks\":[\"Review\"]}")
+    let operation = @opgrain.Operation::parse(
+      "[{\"p\":[\"tasks\",1],\"li\":\"Publish\"}]",
+    )
+    let next = @opgrain.apply(board, operation)
+    println(@opgrain.stringify_json(next))
+  } catch {
+    _ => abort("board operation failed")
+  }
+}
+```
+
+执行 `moon run cmd/main --target js`，输出 `{"tasks":["Review","Publish"]}`。本仓库中相同程序位于 [examples/quickstart](examples/quickstart/main.mbt)，可直接运行 `moon run examples/quickstart --target js --frozen`。上方 `sbqrre/board-client` 仅是本地示例模块名，不需要发布该调用方。
+
+从源码依赖时，将库和调用方放入同一个 `moon.work`，具体配置见 [源码依赖](docs/semantics.md#从源代码依赖)。
 
 处理离线看板时，可以用 `Engine::draft` 记录真实旧值，或用 `Engine::diff` 从两份快照生成 JSON0 操作。示例的第六个案例将卡片移动与离线标题编辑合并，跟随标题光标，再用 `Journal::revert` 撤销移动并保留标题编辑。详见 [快照编辑、合并与位置跟踪](docs/editing.md)。
 
@@ -68,12 +95,15 @@ moon add sbqrre/opgrain@0.3.0
 
 ```sh
 npm --prefix test/oracle ci --ignore-scripts
+npm --prefix test/oracle run docs
 npm --prefix test/oracle test
 npm --prefix test/oracle run fixtures -- --check
 npm --prefix test/oracle run live
 npm --prefix test/oracle run extended
 npm --prefix test/oracle run optimized
 npm --prefix test/oracle run package-smoke
+moon check --frozen --deny-warn --target js
+moon build --frozen --deny-warn --target js --release
 moon test --frozen --deny-warn --target native
 moon test --frozen --deny-warn --target js
 moon test --frozen --deny-warn --target wasm
@@ -83,3 +113,9 @@ moon test --frozen --deny-warn --target wasm-gc
 MoonBit 套件读取 Node 生成的固定语料。比较操作数组时忽略 JSON 对象键的排列顺序，并单独检查应用后的语义。Node.js 只用于生成和复核测试数据。测试范围和复现细节见 [测试方法](docs/verification.md)。
 
 基准覆盖 100、1,000 和 10,000 张卡片，使用 release 构建并记录 9 批计时。运行 `node benchmarks/run.mjs` 可测量当前版本，`node benchmarks/compare.mjs js` 可与固定历史版本比较。本机实测表与成本说明见 [看板工作负载基准](docs/benchmarks.md)。
+
+### 源码与许可
+
+源码保持一个根库包，按职责分文件；[源码导航](docs/layout.md) 说明核心、示例、测试、生成语料和开发工具的边界。`node test/oracle/source-size.mjs` 分开报告各类 MoonBit 源码，核心规模不包含测试、示例或生成接口。
+
+本项目自身贡献采用 [MIT](LICENSE)。JSON0、text0 及上游测试来源、版本与改写范围见 [来源说明](docs/provenance.md)；上游版权和完整许可文本保留在 [第三方声明](THIRD_PARTY_NOTICES.md) 及 `LICENSES/` 中。上游 README 与包元数据的 MIT/ISC 差异也如实记录。[版本记录](CHANGELOG.md) 描述已发布版本。

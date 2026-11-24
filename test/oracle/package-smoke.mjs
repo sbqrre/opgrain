@@ -29,13 +29,18 @@ if (!registry) {
   const entries = run(windows ? "tar" : "unzip", windows ? ["-tf", archive] : ["-Z1", archive], fixture)
     .trim().split(/\r?\n/).map(entry => entry.replaceAll("\\", "/"));
   assert.ok(entries.every(entry => !entry.startsWith("/") && !entry.split("/").includes("..")));
-  assert.ok(["moon.mod", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md", "snapshot.mbt", "undo.mbt", "indexed_diff.mbt", "decoder.mbt", "rebase_buffer.mbt"].every(name => entries.includes(name)));
+  assert.ok(["moon.mod", "LICENSE", "README.md", "THIRD_PARTY_NOTICES.md", "snapshot.mbt", "undo.mbt", "indexed_diff.mbt", "decoder.mbt", "rebase_buffer.mbt", "LICENSES/ot-json0-1.1.0.txt", "LICENSES/ot-fuzzer-1.3.1.txt", "docs/provenance.md"].every(name => entries.includes(name)));
   assert.ok(entries.every(entry => !/^(test\/|benchmarks\/|\.github\/)|_(wb)?test\.mbt$/.test(entry)));
   const library = join(fixture, "opgrain");
   mkdirSync(library);
   if (windows) run("tar", ["-xf", archive, "-C", library], fixture);
   else run("unzip", ["-q", archive, "-d", library], fixture);
-  writeFileSync(join(fixture, "moon.work"), 'members = ["opgrain", "app"]\n');
+  for (const [name, version] of [["ot-json0", "1.1.0"], ["ot-fuzzer", "1.3.1"]]) {
+    const source = readFileSync(join(root, "test/oracle/node_modules", name, "README.md"), "utf8");
+    const notice = source.slice(source.indexOf("Copyright 2011")).trim();
+    assert.equal(readFileSync(join(library, "LICENSES", name + "-" + version + ".txt"), "utf8").trim(), notice);
+  }
+  writeFileSync(join(fixture, "moon.work"), 'members = ["opgrain", "app", "quickstart"]\n');
 }
 
 const consumer = join(fixture, "app");
@@ -78,8 +83,16 @@ fn main {
 }
 `);
 if (registry) run("moon", ["check", "--target", "js"], consumer);
+const quickstart = join(fixture, "quickstart");
+mkdirSync(join(quickstart, "cmd/main"), { recursive: true });
+writeFileSync(join(quickstart, "moon.mod"), `name = "sbqrre/opgrain-readme-check"\nversion = "0.1.0"\nimport { "sbqrre/opgrain@${version}" }\n`);
+writeFileSync(join(quickstart, "cmd/main/moon.pkg"), readFileSync(join(root, "examples/quickstart/moon.pkg")));
+writeFileSync(join(quickstart, "cmd/main/main.mbt"), readFileSync(join(root, "examples/quickstart/main.mbt")));
+if (registry) run("moon", ["check", "--target", "js"], quickstart);
 for (const target of ["js", "native", "wasm", "wasm-gc"]) {
   const result = run("moon", ["run", ".", "--target", target, "--frozen", "--quiet"], consumer);
   assert.deepEqual(JSON.parse(result), { tasks: ["Test", "Ready", "Review"] });
+  const sample = run("moon", ["run", "cmd/main", "--target", target, "--frozen", "--quiet"], quickstart);
+  assert.deepEqual(JSON.parse(sample), { tasks: ["Review", "Publish"] });
 }
 console.log(`Validated sbqrre/opgrain@${version} from ${registry ? "the public registry" : "its packaged archive"} in four targets`);
